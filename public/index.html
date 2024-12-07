@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>首页 - 在线商店</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/index.css">
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <h1>在线商店</h1>
+        <nav>
+            <a href="login.html" id="login-link">登录</a>
+            <a href="register.html" id="register-link">注册</a>
+            <a href="cart.html" id="cart-link" style="display:none;">购物车</a>
+            <a href="products.html" id="admin-link" style="display:none;">产品管理</a> <!-- 默认隐藏 -->
+        </nav>
+        <div id="username"></div> <!-- 显示用户名 -->
+        <button id="logout-button" onclick="logout()" style="display:none;">注销</button> <!-- 默认隐藏 -->
+    </header>
+
+    <!-- Main Content -->
+    <section id="main-content">
+        <h2>欢迎光临我们的在线商店！</h2>
+        <p>浏览我们的精选商品并开始购物！</p>
+
+        <!-- 产品列表 -->
+        <div id="product-list">
+            <!-- 产品项通过 JavaScript 动态加载 -->
+        </div>
+
+        <!-- 加载指示器 -->
+        <div id="loading-indicator" style="display: none;">加载中...</div>
+
+        <!-- 错误提示 -->
+        <div id="error-message" style="color: red; display: none;">没有找到产品，稍后再试</div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2024 在线商店. 版权所有</p>
+    </footer>
+
+    <script src="js/main.js"></script> <!-- 引入 JavaScript 文件 -->
+</body>
+
+</html>

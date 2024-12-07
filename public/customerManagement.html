@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>客户管理 - 销售管理</title>
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <h1>客户管理</h1>
+        <nav>
+            <a href="salesDashboard.html">返回管理面板</a>
+            <a href="index.html">首页</a>
+        </nav>
+    </header>
+
+    <!-- Customer Management Section -->
+    <section id="customer-management">
+        <h2>顾客信息</h2>
+        <table id="customer-table">
+            <thead>
+                <tr>
+                    <th>用户名</th>
+                    <th>邮箱</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="customer-table-body">
+                <!-- 顾客信息将动态加载 -->
+            </tbody>
+        </table>
+
+        <div id="customer-logs">
+            <h3>浏览/购买日志</h3>
+            <ul id="customer-log-list">
+                <!-- 顾客日志信息将动态加载 -->
+            </ul>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2024 在线商店. 版权所有</p>
+    </footer>
+
+    <script src="js/customerManagement.js"></script>
+</body>
+
+</html>

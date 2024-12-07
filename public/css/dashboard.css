@@ -1,0 +1,67 @@
+/* dashboard.css */
+
+/* 设置销售管理面板的整体布局 */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+}
+
+/* 页面头部样式 */
+header {
+    background-color: #333;
+    color: white;
+    padding: 20px;
+    text-align: center;
+}
+
+header nav a {
+    color: white;
+    text-decoration: none;
+    margin: 0 15px;
+}
+
+header nav a:hover {
+    text-decoration: underline;
+}
+
+/* 销售管理面板的主体部分 */
+#sales-dashboard {
+    margin: 20px;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* 链接列表样式 */
+#sales-dashboard ul {
+    list-style: none;
+    padding: 0;
+}
+
+#sales-dashboard ul li {
+    margin: 10px 0;
+}
+
+#sales-dashboard ul li a {
+    color: #007bff;
+    font-size: 18px;
+    text-decoration: none;
+}
+
+#sales-dashboard ul li a:hover {
+    text-decoration: underline;
+}
+
+/* Footer样式 */
+footer {
+    text-align: center;
+    background-color: #333;
+    color: white;
+    padding: 10px;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+}

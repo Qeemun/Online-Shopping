@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>购物车 - 在线商店</title>
+    <link rel="stylesheet" href="css/cart.css">
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <h1>在线商店</h1>
+        <nav>
+            <a href="index.html">首页</a>
+            <a href="checkout.html" id="checkout-link">结账</a>
+        </nav>
+    </header>
+
+    <!-- Cart Section -->
+    <section id="cart-section">
+        <h2>我的购物车</h2>
+
+        <!-- 购物车商品列表 -->
+        <table id="cart-items">
+            <thead>
+                <tr>
+                    <th>商品名称</th>
+                    <th>数量</th>
+                    <th>单价</th>
+                    <th>总价</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="cart-items-body">
+                <!-- 购物车商品将动态加载 -->
+            </tbody>
+        </table>
+
+        <!-- 购物车总金额 -->
+        <div id="cart-total">
+            <p>总金额: <span id="total-price">加载中...</span> 元</p>
+        </div>
+
+        <!-- 如果购物车为空，显示提示信息 -->
+        <p id="empty-cart-message" style="display: none;">您的购物车为空！</p>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2024 在线商店. 版权所有</p>
+    </footer>
+
+    <script src="js/cart.js"></script>
+    <script>
+        function getOrderIdFromCart() {
+            // 从本地存储中获取购物车和订单ID
+            const cart = JSON.parse(localStorage.getItem('cart')) || [];
+            const orderId = localStorage.getItem('orderId');  
+            return orderId;  // 返回订单ID
+        }
+
+        // 在页面加载时，动态构建结账链接
+        document.addEventListener('DOMContentLoaded', () => {
+            const orderId = getOrderIdFromCart();  // 获取订单ID
+            if (orderId) {
+                // 如果订单ID有效，将其附加到结账链接上
+                const checkoutLink = document.getElementById('checkout-link');
+                checkoutLink.href = `checkout.html?orderId=${orderId}`;
+            } else {
+                alert('无法找到有效的订单ID');
+            }
+        });
+    </script>
+</body>
+
+</html>

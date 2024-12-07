@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>订单管理 - 销售管理</title>
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <h1>订单管理</h1>
+        <nav>
+            <a href="salesDashboard.html">返回管理面板</a>
+            <a href="index.html">首页</a>
+        </nav>
+    </header>
+
+    <!-- Order Management Section -->
+    <section id="order-management">
+        <h2>现有订单</h2>
+        <table id="order-table">
+            <thead>
+                <tr>
+                    <th>订单ID</th>
+                    <th>顾客</th>
+                    <th>总金额</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="order-table-body">
+                <!-- 订单信息将动态加载 -->
+            </tbody>
+        </table>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2024 在线商店. 版权所有</p>
+    </footer>
+
+    <script src="js/orderManagement.js"></script>
+</body>
+
+</html>

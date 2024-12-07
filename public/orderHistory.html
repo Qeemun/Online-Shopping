@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>订单历史 - 在线商店</title>
+    <link rel="stylesheet" href="css/main.css">
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <h1>在线商店</h1>
+        <nav>
+            <a href="index.html">首页</a>
+            <a href="cart.html">购物车</a>
+        </nav>
+    </header>
+
+    <!-- Order History Section -->
+    <section id="order-history">
+        <h2>我的订单历史</h2>
+
+        <!-- 订单列表 -->
+        <table id="order-history-table">
+            <thead>
+                <tr>
+                    <th>订单ID</th>
+                    <th>总金额</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="order-history-body">
+                <!-- 订单历史信息将动态加载 -->
+            </tbody>
+        </table>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2024 在线商店. 版权所有</p>
+    </footer>
+
+    <script src="js/orderHistory.js"></script>
+</body>
+
+</html>

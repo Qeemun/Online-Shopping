@@ -1,0 +1,15 @@
+# 忽略 Node.js 项目生成的文件
+node_modules/
+
+# 忽略环境变量文件
+.env
+
+# 忽略日志文件
+*.log
+
+# 忽略 IDE 生成的文件（如 VSCode 的设置文件）
+.vscode/
+
+# 忽略构建产物或临时文件
+dist/
+build/

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>结账 - 在线商店</title>
+    <link rel="stylesheet" href="css/checkout.css">
+</head>
+
+<body>
+
+    <!-- Header -->
+    <header>
+        <h1>在线商店</h1>
+        <nav>
+            <a href="cart.html">返回购物车</a>
+            <a href="index.html">首页</a>
+        </nav>
+    </header>
+
+    <!-- Checkout Section -->
+    <section id="checkout-section">
+        <h2>结账</h2>
+
+        <!-- Order Summary -->
+        <div id="order-summary">
+            <h3>订单摘要</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>商品名称</th>
+                        <th>数量</th>
+                        <th>单价</th>
+                        <th>总价</th>
+                    </tr>
+                </thead>
+                <tbody id="order-summary-body">
+                    <!-- 订单内容将动态加载 -->
+                </tbody>
+            </table>
+            <p>运费: <span id="shipping-fee">0.00</span> 元</p> <!-- 假设运费为0 -->
+            <p>总金额: <span id="total-price"></span> 元</p>
+        </div>
+
+        <!-- 收货地址和支付信息 -->
+        <div id="payment-info">
+            <h3>收货地址</h3>
+            <input type="text" id="address" placeholder="请输入收货地址" required><br>
+
+            <h3>支付信息</h3>
+            <input type="text" id="payment" placeholder="请输入支付信息" required><br>
+
+            <button id="pay-button">立即支付</button>
+            <p id="payment-status">支付状态: 等待支付</p>  <!-- 显示支付状态 -->
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2024 在线商店. 版权所有</p>
+    </footer>
+
+    <script src="js/checkout.js"></script>
+</body>
+
+</html>

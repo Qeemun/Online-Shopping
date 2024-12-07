@@ -1,0 +1,108 @@
+/* main.css */
+
+/* 页面通用样式 */
+body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Header样式 */
+header {
+    background-color: #333;
+    color: white;
+    padding: 20px;
+    text-align: center;
+}
+
+header nav {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+header nav a {
+    color: white;
+    text-decoration: none;
+    font-size: 16px;
+}
+
+header nav a:hover {
+    text-decoration: underline;
+}
+
+#username {
+    font-size: 18px;
+    color: #fff;
+    margin-top: 10px;
+}
+
+#logout-button {
+    margin-top: 10px;
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+#logout-button:hover {
+    background-color: #0056b3;
+}
+
+/* 页面内容 */
+section {
+    padding: 20px;
+    flex: 1;
+    text-align: center;
+}
+
+/* 产品卡片 */
+.product-card {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 10px;
+    width: 220px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease-in-out;
+    display: inline-block;
+}
+
+.product-card:hover {
+    transform: scale(1.05);
+}
+
+.product-card img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+}
+
+/* 错误消息 */
+#error-message {
+    color: red;
+    text-align: center;
+    font-size: 18px;
+}
+
+/* 加载指示器 */
+#loading-indicator {
+    text-align: center;
+    font-size: 18px;
+    color: #007bff;
+}
+
+/* Footer样式 */
+footer {
+    background-color: #333;
+    color: white;
+    text-align: center;
+    padding: 10px;
+    margin-top: auto;
+}

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>订单详情 - 在线商店</title>
+    <link rel="stylesheet" href="css/order.css">
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <h1>在线商店</h1>
+        <nav>
+            <a href="orderHistory.html">返回订单历史</a>
+            <a href="index.html">首页</a>
+        </nav>
+    </header>
+
+    <!-- Order Details Section -->
+    <section id="order-details">
+        <h2>订单详情</h2>
+
+        <!-- Order Information -->
+        <div id="order-info">
+            <h3>订单信息</h3>
+            <p><strong>订单编号:</strong> <span id="order-id">加载中...</span></p>
+            <p><strong>总金额:</strong> <span id="total-price">加载中...</span> 元</p>
+            <p><strong>订单状态:</strong> <span id="order-status">加载中...</span></p>
+        </div>
+
+        <!-- Products List -->
+        <h3>产品列表</h3>
+        <table id="order-summary-table">
+            <thead>
+                <tr>
+                    <th>商品名称</th>
+                    <th>数量</th>
+                    <th>单价</th>
+                    <th>总价</th>
+                </tr>
+            </thead>
+            <tbody id="order-items-body">
+                <!-- 商品信息将动态加载 -->
+            </tbody>
+        </table>
+
+        <!-- Button to track order (if available) -->
+        <button id="track-order-button" onclick="trackOrder()">跟踪订单</button>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2024 在线商店. 版权所有</p>
+    </footer>
+
+    <script src="js/orderDetails.js"></script>
+</body>
+
+</html>

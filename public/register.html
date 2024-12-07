@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册 - 在线商店</title>
+    <link rel="stylesheet" href="css/register.css">
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <h1>在线商店</h1>
+        <nav>
+            <a href="login.html">已有账户？登录</a>
+            <a href="index.html">返回首页</a>
+        </nav>
+    </header>
+
+    <!-- Register Form -->
+    <section id="register-form">
+        <h2>注册新账户</h2>
+        <form id="register-form" onsubmit="registerUser(event)">
+            <div>
+                <label for="username">用户名</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div>
+                <label for="email">邮箱</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div>
+                <label for="password">密码</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <div>
+                <label for="confirm-password">确认密码</label>
+                <input type="password" id="confirm-password" name="confirm-password" required>
+            </div>
+            <button type="submit">注册</button>
+        </form>
+    
+        <!-- 显示错误信息 -->
+        <p id="error-message" style="color: red; display: none;">注册失败，请重试</p>
+        
+        <!-- 加载指示器 -->
+        <div id="loading-indicator" style="display: none;">正在加载...</div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2024 在线商店. 版权所有</p>
+    </footer>
+
+    <script src="js/auth.js"></script>
+</body>
+</html>

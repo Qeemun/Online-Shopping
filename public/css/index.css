@@ -1,0 +1,37 @@
+/* index.css */
+
+/* 产品项样式 */
+.product-item {
+    background-color: #fff;
+    padding: 20px;
+    margin: 10px;
+    width: 220px;
+    text-align: center;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease-in-out;
+}
+
+.product-item:hover {
+    transform: scale(1.05);
+}
+
+.product-item img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+}
+
+/* 加载指示器 */
+#loading-indicator {
+    text-align: center;
+    font-size: 18px;
+    color: #007bff;
+}
+
+/* 错误提示 */
+#error-message {
+    color: red;
+    text-align: center;
+    font-size: 18px;
+}
