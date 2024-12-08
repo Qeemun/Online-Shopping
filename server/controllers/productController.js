@@ -6,19 +6,18 @@ const path = require('path');
 // 配置文件存储
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'public/uploads/') // 确保此目录存在
+        cb(null, 'public/uploads/');
     },
     filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
-        cb(null, uniqueSuffix + path.extname(file.originalname))
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + path.extname(file.originalname));
     }
 });
 
-// 配置 multer
 const upload = multer({ 
     storage: storage,
     limits: {
-        fileSize: 5 * 1024 * 1024 // 限制5MB
+        fileSize: 5 * 1024 * 1024
     },
     fileFilter: (req, file, cb) => {
         const allowedTypes = /jpeg|jpg|png/;
@@ -33,22 +32,61 @@ const upload = multer({
     }
 });
 
-// 导出 multer 配置
 exports.upload = upload;
 
-// 获取所有产品
+exports.createProduct = async (req, res) => {
+    try {
+        const { name, description, price, stock } = req.body;
+        const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+        
+        if (!name || !price) {
+            return res.status(400).json({
+                success: false,
+                message: '产品名称和价格为必填项'
+            });
+        }
+
+        const newProduct = await Product.create({
+            name,
+            description,
+            price,
+            stock: stock || 0,
+            imageUrl
+        });
+
+        res.status(201).json({
+            success: true,
+            product: newProduct,
+            message: '产品创建成功'
+        });
+    } catch (error) {
+        console.error('创建产品失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '创建产品时出错',
+            error: error.message
+        });
+    }
+};
+
 exports.getAllProducts = async (req, res) => {
     try {
         const products = await Product.findAll();
+        // 添加图片路径前缀
+        const formattedProducts = products.map(product => ({
+            ...product.toJSON(),
+            imageUrl: product.imageUrl ? `http://localhost:3000${product.imageUrl}` : 'http://localhost:3000/images/default-product.jpg'
+        }));
         res.status(200).json({
             success: true,
-            products: products
+            products: formattedProducts
         });
     } catch (error) {
         console.error('获取产品列表失败:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: '获取产品列表时出错' 
+        res.status(500).json({
+            success: false,
+            message: '获取产品列表时出错',
+            error: error.message
         });
     }
 };
@@ -76,43 +114,6 @@ exports.getProductDetails = async (req, res) => {
             success: false, 
             message: '获取产品详情失败', 
             error: error.message 
-        });
-    }
-};
-
-// 创建新产品
-exports.createProduct = async (req, res) => {
-    try {
-        const { name, description, price, stock } = req.body;
-        const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
-        
-        // 输入验证
-        if (!name || !price) {
-            return res.status(400).json({
-                success: false,
-                message: '产品名称和价格为必填项'
-            });
-        }
-
-        const newProduct = await Product.create({
-            name,
-            description,
-            price,
-            stock: stock || 0,
-            imageUrl
-        });
-
-        res.status(201).json({
-            success: true,
-            product: newProduct,
-            message: '产品创建成功'
-        });
-    } catch (error) {
-        console.error('创建产品失败:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: '创建产品时出错',
-            error: error.message
         });
     }
 };

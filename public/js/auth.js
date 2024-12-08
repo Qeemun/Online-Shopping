@@ -148,3 +148,5 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('error-message').style.display = 'none';
     document.getElementById('loading-indicator').style.display = 'none';
 });
+
+

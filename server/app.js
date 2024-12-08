@@ -28,6 +28,10 @@ app.use('/pay', paymentRoutes);
 // 提供 public 目录中的静态文件
 app.use(express.static(path.join(__dirname, 'public')));
 
+// 添加静态文件服务
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+app.use('/images', express.static(path.join(__dirname, 'public/images')));
+
 // 路由配置
 // 首页，提供 public 目录中的静态 index.html
 app.get('/', (req, res) => {
@@ -79,7 +83,6 @@ app.get('/salesDashboard', (req, res) => {
 app.get('/salesReport', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'salesReport.html'));
 });
-
 // 同步数据库
 db.sequelize.sync().then(() => {
     console.log('数据库同步成功');
