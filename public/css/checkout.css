@@ -9,6 +9,9 @@
     background-color: #fff;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--spacing-lg);
 }
 
 #order-summary {
@@ -33,6 +36,9 @@
 
 #payment-info {
     margin-top: 20px;
+    background: var(--primary-light);
+    padding: var(--spacing-lg);
+    border-radius: var(--border-radius-md);
 }
 
 #payment-info input {

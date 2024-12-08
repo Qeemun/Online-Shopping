@@ -13,7 +13,8 @@ body {
 
 /* Header样式 */
 header {
-    background-color: #333;
+    background: var(--gradient-primary);
+    backdrop-filter: blur(8px);
     color: white;
     padding: 20px;
     text-align: center;
@@ -61,27 +62,46 @@ section {
     text-align: center;
 }
 
-/* 产品卡片 */
-.product-card {
-    background-color: #fff;
-    border-radius: 8px;
-    padding: 20px;
-    margin: 10px;
-    width: 220px;
-    text-align: center;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease-in-out;
-    display: inline-block;
+#product-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-lg);
 }
 
-.product-card:hover {
-    transform: scale(1.05);
+/* 修改产品卡片样式 */
+.product-card, .product-item {
+    background: var(--white);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-md);
+    transition: transform var(--transition-speed);
+    width: 220px;  /* 固定宽度 */
+    padding: var(--spacing-md);
+    /* 移除 margin，改用容器的 gap 控制间距 */
+}
+
+/* 产品卡片 */
+.product-card, .product-item {
+    background: var(--white);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-md);
+    transition: transform var(--transition-speed);
+    max-width: 220px;  /* 添加最大宽度限制 */
+    padding: var(--spacing-md); /* 使用变量控制内边距 */
+    margin: var(--spacing-sm); /* 添加外边距 */
 }
 
 .product-card img {
     width: 100%;
     height: auto;
-    border-radius: 8px;
+    max-height: 160px; /* 限制图片最大高度 */
+    object-fit: cover; /* 保持图片比例 */
+    border-radius: var(--border-radius-sm);
+}
+
+.product-card:hover {
+    transform: scale(1.03); /* 减小悬停时的放大效果 */
 }
 
 /* 错误消息 */

@@ -1,11 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-cn">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>订单历史 - 在线商店</title>
-    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/orderHistory.css">
 </head>
 
 <body>
@@ -34,6 +37,11 @@
             </thead>
             <tbody id="order-history-body">
                 <!-- 订单历史信息将动态加载 -->
+                <td>
+                    <span class="order-status status-${order.status}">
+                        ${order.status}
+                    </span>
+                </td>
             </tbody>
         </table>
     </section>

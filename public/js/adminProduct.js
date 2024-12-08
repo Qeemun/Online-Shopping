@@ -51,32 +51,53 @@ function editProduct(productId) {
     window.location.href = `editProduct.html?id=${productId}`;
 }
 
-// 添加新产品
-function addProduct(event) {
+// 图片预览功能
+document.getElementById('product-image').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('image-preview');
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+        }
+        reader.readAsDataURL(file);
+    }
+});
+
+// 修改添加商品函数
+async function addProduct(event) {
     event.preventDefault();
 
-    const name = document.getElementById('product-name').value;
-    const price = document.getElementById('product-price').value;
-    const stock = document.getElementById('product-stock').value;
-    const imageUrl = document.getElementById('product-image').value;
+    const formData = new FormData();
+    formData.append('name', document.getElementById('product-name').value);
+    formData.append('price', document.getElementById('product-price').value);
+    formData.append('stock', document.getElementById('product-stock').value);
+    
+    const imageFile = document.getElementById('product-image').files[0];
+    if (imageFile) {
+        formData.append('image', imageFile);
+    }
 
-    const productData = { name, price, stock, imageUrl };
+    try {
+        const response = await fetch('http://localhost:3000/products', {
+            method: 'POST',
+            body: formData // 不需要设置 Content-Type，浏览器会自动设置
+        });
 
-    fetch('http://localhost:3000/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(productData)
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('新产品已添加');
-                loadProducts();
-            } else {
-                alert('添加失败');
-            }
-        })
-        .catch(error => console.error('添加产品失败', error));
+        const data = await response.json();
+        if (data.success) {
+            alert('商品添加成功');
+            document.getElementById('product-form').reset();
+            document.getElementById('image-preview').style.display = 'none';
+            loadProducts();
+        } else {
+            alert('添加失败: ' + data.message);
+        }
+    } catch (error) {
+        console.error('添加商品失败:', error);
+        alert('添加失败，请重试');
+    }
 }
 
 // 页面加载时，调用加载产品

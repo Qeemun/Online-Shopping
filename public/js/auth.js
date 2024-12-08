@@ -1,16 +1,24 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // 获取当前页面的路径
+    const currentPath = window.location.pathname;
+    
+    //如果当前在登录页面，不要自动跳转
+    if (currentPath.includes('login.html')) {
+        // 只初始化表单状态
+        document.getElementById('error-message').style.display = 'none';
+        document.getElementById('loading-indicator').style.display = 'none';
+        return;
+    }
+
+    // 其他页面才检查登录状态并跳转
     const user = localStorage.getItem('user');
     const token = localStorage.getItem('token');
 
-    // 检查用户信息和 token
     if (user && token) {
-        const userData = JSON.parse(user);
-
-        // 如果已经登录，则跳转到首页
-        window.location.href = 'index.html';
-    } else {
-        // 如果未登录，继续显示登录页面
-        console.log('未登录');
+        // 已登录状态下，如果在登录页面则跳转到首页
+        if (currentPath.includes('login.html')) {
+            window.location.href = 'index.html';
+        }
     }
 });
 // 登录功能
@@ -38,21 +46,26 @@ function loginUser(event) {
     })
     .then(response => response.json())
     .then(data => {
-        showLoading(false);  // 隐藏加载提示
+        showLoading(false);
 
-        if (data.success) {
-            // 登录成功，存储用户信息和 JWT Token
-            localStorage.setItem('user', JSON.stringify(data.user)); // 存储用户信息
-            localStorage.setItem('token', data.token); // 存储 JWT Token
-            window.location.href = 'index.html'; // 登录成功后跳转到首页
+        if (data.success && data.token && data.user) {
+            // 存储完整的用户信息，包括角色
+            localStorage.setItem('user', JSON.stringify({
+                id: data.user.id,
+                email: data.user.email,
+                username: data.user.username,
+                role: data.user.role // 确保保存用户角色
+            }));
+            localStorage.setItem('token', data.token);
+            window.location.href = 'index.html';
         } else {
-            showError(data.message || "用户名或密码错误");  // 显示具体错误信息
+            throw new Error(data.message || "登录失败");
         }
     })
     .catch(error => {
         showLoading(false);
-        console.error('登录失败', error);
-        showError("登录失败，请重试");
+        console.error('登录失败:', error);
+        showError(error.message || "登录失败，请重试");
     });
 }
 

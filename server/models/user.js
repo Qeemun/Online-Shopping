@@ -1,45 +1,93 @@
 const { Model, DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
 const bcrypt = require('bcryptjs');
 
-class User extends Model {}
+module.exports = (sequelize) => {
+    class User extends Model {
+        // 添加权限检查方法
+        isCustomer() {
+            return this.role === 'customer';
+        }
 
-User.init({
-    username: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true
-    },
-    email: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true
-    },
-    password: {
-        type: DataTypes.STRING(30),
-        allowNull: false
-    },
-    role: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        defaultValue: 'customer', // 默认角色为顾客
-        validate: {
-            isIn: [['customer', 'sales']] // 角色只能是 customer 或 sales
+        isSales() {
+            return this.role === 'sales';
+        }
+
+        static associate(models) {
+            User.hasMany(models.CartItem, {
+                foreignKey: 'user_id',
+                as: 'cartItems'
+            });
+            User.hasMany(models.Order, {
+                foreignKey: 'user_id',
+                as: 'orders'
+            });
         }
     }
-}, {
-    sequelize,
-    modelName: 'User',
-    timestamps: true,
-    hooks: {
-        // 在创建和更新用户之前加密密码
-        beforeSave: async (user) => {   // 使用 beforeSave 钩子，处理更新时的密码加密
-            if (user.password && user.changed('password')) {  // 确保密码发生变化时才加密
-                const salt = await bcrypt.genSalt(10);
-                user.password = await bcrypt.hash(user.password, salt);
+
+    User.init({
+        id: {
+            type: DataTypes.INTEGER,
+            primaryKey: true,
+            autoIncrement: true
+        },
+        username: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            unique: true,
+            validate: {
+                notEmpty: true,
+                len: [2, 50]
+            }
+        },
+        email: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            unique: true,
+            validate: {
+                isEmail: true
+            }
+        },
+        password: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            validate: {
+                len: [6, 100]
+            }
+        },
+        role: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            defaultValue: 'customer',
+            validate: {
+                isIn: [['customer', 'sales']]
             }
         }
-    }
-});
+    }, {
+        sequelize,
+        modelName: 'User',
+        tableName: 'users',
+        timestamps: true,
+        hooks: {
+            // 添加 beforeCreate 钩子来处理密码加密
+            beforeCreate: async (user) => {
+                if (user.password) {
+                    const salt = await bcrypt.genSalt(10);
+                    user.password = await bcrypt.hash(user.password, salt);
+                }
+            },
+            // 添加 beforeUpdate 钩子来处理密码更新
+            beforeUpdate: async (user) => {
+                if (user.changed('password')) {
+                    const salt = await bcrypt.genSalt(10);
+                    user.password = await bcrypt.hash(user.password, salt);
+                }
+            }
+        }
+    });
 
-module.exports = User;
+    User.prototype.validatePassword = async function(password) {
+        return await bcrypt.compare(password, this.password);
+    };
+
+    return User;
+};

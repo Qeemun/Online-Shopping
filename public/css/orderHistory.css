@@ -1,0 +1,88 @@
+#order-history {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--spacing-lg);
+}
+
+#order-history h2 {
+    color: var(--text-color);
+    margin-bottom: var(--spacing-lg);
+    font-size: 2rem;
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: var(--spacing-sm);
+}
+
+#order-history-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--white);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+}
+
+#order-history-table thead {
+    background: var(--primary-color);
+    color: var(--white);
+}
+
+#order-history-table th,
+#order-history-table td {
+    padding: var(--spacing-md);
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+#order-history-table tbody tr:hover {
+    background-color: var(--primary-light);
+    transition: background-color var(--transition-speed);
+}
+
+.order-action-btn {
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--primary-color);
+    color: var(--white);
+    border: none;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-speed);
+}
+
+.order-action-btn:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-2px);
+}
+
+.order-status {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius-sm);
+    font-weight: 500;
+}
+
+.status-pending {
+    background-color: var(--warning-color-light);
+    color: var(--warning-color);
+}
+
+.status-paid {
+    background-color: var(--success-color-light);
+    color: var(--success-color);
+}
+
+.status-shipped {
+    background-color: var(--info-color-light);
+    color: var(--info-color);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    #order-history-table {
+        display: block;
+        overflow-x: auto;
+    }
+    
+    #order-history-table th,
+    #order-history-table td {
+        min-width: 120px;
+    }
+}

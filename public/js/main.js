@@ -74,48 +74,6 @@ function logout() {
     window.location.href = 'login.html'; // 跳转到登录页面
 }
 
-// 加载并展示产品列表
-function loadProducts() {
-    const productList = document.getElementById('product-list');
-    const loadingIndicator = document.getElementById('loading-indicator');
-    const errorMessage = document.getElementById('error-message');
-
-    // 显示加载指示器
-    loadingIndicator.style.display = 'block';
-    errorMessage.style.display = 'none';
-
-    fetch('http://localhost:3000/products')
-        .then(response => response.json())
-        .then(products => {
-            loadingIndicator.style.display = 'none';
-
-            if (Array.isArray(products) && products.length > 0) {
-                let productsHTML = '';
-                products.forEach(product => {
-                    productsHTML += `
-                        <div class="product-card">
-                            <img src="${product.imageUrl}" alt="${product.name}">
-                            <h3>${product.name}</h3>
-                            <p>${product.price}元</p>
-                            <a href="productDetails.html?id=${product.id}">查看详情</a>
-                            <button onclick="addToCart(${product.id})">加入购物车</button>
-                        </div>
-                    `;
-                });
-                productList.innerHTML = productsHTML;
-            } else {
-                errorMessage.style.display = 'block';
-                errorMessage.textContent = '没有找到产品，稍后再试';
-            }
-        })
-        .catch(error => {
-            loadingIndicator.style.display = 'none';
-            errorMessage.style.display = 'block';
-            errorMessage.textContent = '加载产品失败，请稍后重试';
-            console.error('获取产品数据失败', error);
-        });
-}
-
 // 加入购物车功能
 function addToCart(productId) {
     const user = JSON.parse(localStorage.getItem('user')); // 获取用户信息

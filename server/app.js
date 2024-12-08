@@ -9,6 +9,7 @@ const orderRoutes = require('./routes/orderRoutes');
 const cartRoutes = require('./routes/cartRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const sequelize = require('./config/database');
+const db = require('./models'); // 导入并初始化模型关联
 
 // 中间件
 app.use(express.json());  // 解析 JSON 请求体
@@ -79,6 +80,12 @@ app.get('/salesReport', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'salesReport.html'));
 });
 
+// 同步数据库
+db.sequelize.sync().then(() => {
+    console.log('数据库同步成功');
+}).catch(err => {
+    console.error('数据库同步失败:', err);
+});
 
 // 连接到数据库并启动服务器
 const PORT = process.env.PORT || 3000;

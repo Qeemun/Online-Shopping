@@ -1,37 +1,60 @@
 // 获取订单信息并加载
 function loadOrderSummary(orderId) {
-    // 从后端获取订单信息
-    fetch(`http://localhost:3000/orders/${orderId}`)
-        .then(response => response.json())
-        .then(order => {
-            // 更新订单摘要
-            const orderSummaryBody = document.getElementById('order-summary-body');
-            const totalPriceElement = document.getElementById('total-price');
-            const shippingFeeElement = document.getElementById('shipping-fee');
-            let totalAmount = 0;
+    const token = localStorage.getItem('token');
+    if (!token || !orderId) {
+        alert('订单信息无效');
+        window.location.href = 'cart.html';
+        return;
+    }
 
-            // 加载商品项
-            order.items.forEach(item => {
-                const row = `
-                    <tr>
-                        <td>${item.product.name}</td>
-                        <td>${item.quantity}</td>
-                        <td>${item.price} 元</td>
-                        <td>${(item.price * item.quantity).toFixed(2)} 元</td>
-                    </tr>
-                `;
-                orderSummaryBody.innerHTML += row;
-                totalAmount += item.price * item.quantity;
-            });
+    fetch(`http://localhost:3000/orders/${orderId}`, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('收到的订单数据:', data);
 
-            // 显示运费和总金额
-            shippingFeeElement.textContent = order.shippingFee.toFixed(2);
-            totalPriceElement.textContent = (totalAmount + order.shippingFee).toFixed(2);
-        })
-        .catch(error => {
-            console.error('获取订单信息失败:', error);
-            alert('加载订单信息失败，请稍后重试。');
+        if (!data.success || !data.order) {
+            throw new Error('订单数据无效');
+        }
+
+        const { order } = data;
+        const orderSummaryBody = document.getElementById('order-summary-body');
+        const totalPriceElement = document.getElementById('total-price');
+        
+        orderSummaryBody.innerHTML = '';
+
+        if (!Array.isArray(order.items)) {
+            console.error('订单项数据无效:', order);
+            throw new Error('订单数据格式错误');
+        }
+
+        order.items.forEach(item => {
+            if (!item || !item.product) {
+                console.warn('跳过无效订单项:', item);
+                return;
+            }
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${item.product.name || '未知商品'}</td>
+                <td>${item.quantity || 0}</td>
+                <td>¥${(Number(item.price) || 0).toFixed(2)}</td>
+                <td>¥${(item.total || 0).toFixed(2)}</td>
+            `;
+            orderSummaryBody.appendChild(row);
         });
+
+        totalPriceElement.textContent = (Number(order.total_amount) || 0).toFixed(2);
+        document.getElementById('payment-status').textContent = 
+            `订单状态: ${order.status || '未知'}`;
+    })
+    .catch(error => {
+        console.error('加载订单失败:', error);
+        alert('加载订单失败，请重试');
+    });
 }
 
 // 处理支付请求
@@ -72,19 +95,22 @@ function handlePayment(orderId) {
 
 // 在结账页面点击支付按钮时触发支付处理
 document.getElementById('pay-button').addEventListener('click', () => {
-    const orderId = document.getElementById('order-id').textContent;  // 获取订单ID
+    const orderId = getOrderIdFromUrl();  // 从URL获取订单ID
     handlePayment(orderId);
 });
 
 // 页面加载时，获取订单ID并加载订单摘要
 document.addEventListener('DOMContentLoaded', () => {
-    const orderId = getOrderIdFromUrl();  // 从URL获取订单ID
-    console.log('获取的订单ID:', orderId);  // 打印日志检查订单ID
-    if (orderId) {
-        loadOrderSummary(orderId);  // 加载订单摘要
-    } else {
-        alert('订单ID无效');
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderId = urlParams.get('orderId') || localStorage.getItem('currentOrderId');
+    
+    if (!orderId) {
+        alert('未找到订单信息');
+        window.location.href = 'cart.html';
+        return;
     }
+    
+    loadOrderSummary(orderId);
 });
 
 // 从URL获取订单ID（假设订单ID作为查询参数传递）

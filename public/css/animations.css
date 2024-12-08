@@ -1,0 +1,37 @@
+/* animations.css */
+.hover-scale {
+    transition: transform var(--transition-speed);
+  }
+  
+  .hover-scale:hover {
+    transform: scale(1.05);
+  }
+  
+  .hover-shadow {
+    transition: box-shadow var(--transition-speed);
+  }
+  
+  .hover-shadow:hover {
+    box-shadow: var(--shadow-lg);
+  }
+
+/* animations.css 补充 */
+.loading-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--background-color);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

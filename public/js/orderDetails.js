@@ -1,30 +1,60 @@
 // 加载订单详情
 function loadOrderDetails(orderId) {
-    fetch(`http://localhost:3000/orders/${orderId}`)
-        .then(response => response.json())
-        .then(order => {
-            // 设置订单信息
-            document.getElementById('order-id').textContent = order.id;
-            document.getElementById('total-price').textContent = order.totalAmount;
-            document.getElementById('order-status').textContent = order.status;
+    const token = localStorage.getItem('token');
+    if (!token) {
+        alert('请先登录');
+        window.location.href = 'login.html';
+        return;
+    }
 
-            // 渲染产品列表
-            const orderItemsBody = document.getElementById('order-items-body');
+    fetch(`http://localhost:3000/orders/${orderId}`, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            if (response.status === 401) {
+                localStorage.removeItem('token');
+                window.location.href = 'login.html';
+                throw new Error('请重新登录');
+            }
+            throw new Error('加载订单详情失败');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (!data.success || !data.order) {
+            throw new Error('订单数据无效');
+        }
+
+        const order = data.order;
+        document.getElementById('order-id').textContent = order.id;
+        document.getElementById('total-price').textContent = 
+            `¥${order.total_amount.toFixed(2)}`;
+        document.getElementById('order-status').textContent = order.status;
+
+        const orderItemsBody = document.getElementById('order-items-body');
+        orderItemsBody.innerHTML = '';
+
+        if (order.items && Array.isArray(order.items)) {
             order.items.forEach(item => {
                 const row = `
                     <tr>
-                        <td>${item.productName}</td>
+                        <td>${item.product.name}</td>
                         <td>${item.quantity}</td>
-                        <td>${item.price}</td>
-                        <td>${item.total}</td>
+                        <td>¥${item.price.toFixed(2)}</td>
+                        <td>¥${item.total.toFixed(2)}</td>
                     </tr>`;
                 orderItemsBody.innerHTML += row;
             });
-        })
-        .catch(error => {
-            console.error('加载订单详情失败', error);
-            document.getElementById('order-info').innerHTML = '<p>无法加载订单详情。</p>';
-        });
+        }
+    })
+    .catch(error => {
+        console.error('加载订单详情失败:', error);
+        document.getElementById('order-info').innerHTML = 
+            '<p class="error-message">加载订单详情失败，请重试</p>';
+    });
 }
 
 // 订单跟踪

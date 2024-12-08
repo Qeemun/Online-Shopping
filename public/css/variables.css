@@ -1,0 +1,43 @@
+/* variables.css */
+:root {
+    /* 颜色系统 */
+    --primary-color: #007bff;
+    --primary-hover: #0056b3;
+    --background-color: #f4f4f4;
+    --text-color: #333;
+    --error-color: #dc3545;
+    --success-color: #28a745;
+    --white: #fff;
+    
+    /* 扩展主题色系统 */
+    --primary-light: #e6f0ff;
+    --secondary-color: #6c757d;
+    --accent-color: #ffd700;
+    
+    /* 添加渐变背景 */
+    --gradient-primary: linear-gradient(45deg, var(--primary-color), var(--primary-hover));
+    
+    /* 扩展文字颜色系统 */
+    --text-light: #666;
+    --text-muted: #999;
+    
+    /* 间距系统 */
+    --spacing-xs: 5px;
+    --spacing-sm: 10px;
+    --spacing-md: 15px;
+    --spacing-lg: 20px;
+    --spacing-xl: 30px;
+    
+    /* 圆角 */
+    --border-radius-sm: 4px;
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
+    
+    /* 阴影 */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.1);
+    
+    /* 动画 */
+    --transition-speed: 0.3s;
+  }

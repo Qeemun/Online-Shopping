@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="zh-cn">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -26,16 +25,25 @@
         <!-- 新产品添加表单 -->
         <div id="add-product-form" style="display: none;">
             <h3>添加新产品</h3>
-            <form id="add-product" onsubmit="addProduct(event)">
-                <label for="product-name">产品名称:</label>
-                <input type="text" id="product-name" required><br>
-                <label for="product-price">价格:</label>
-                <input type="number" id="product-price" required><br>
-                <label for="product-stock">库存:</label>
-                <input type="number" id="product-stock" required><br>
-                <label for="product-image">图片URL:</label>
-                <input type="url" id="product-image"><br>
-                <button type="submit">添加产品</button>
+            <form id="product-form" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="product-name">商品名称:</label>
+                    <input type="text" id="product-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="product-price">价格:</label>
+                    <input type="number" id="product-price" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="product-stock">库存:</label>
+                    <input type="number" id="product-stock" required>
+                </div>
+                <div class="form-group">
+                    <label for="product-image">商品图片:</label>
+                    <input type="file" id="product-image" accept="image/*">
+                    <img id="image-preview" style="max-width: 200px; display: none;">
+                </div>
+                <button type="submit">添加商品</button>
             </form>
         </div>
 

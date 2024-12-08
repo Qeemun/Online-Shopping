@@ -1,6 +1,8 @@
-const Order = require('../models/order');
-const Product = require('../models/product');
-const OrderItem = require('../models/orderItem');
+const db = require('../models');  // 修改导入方式
+const Order = db.Order;
+const Product = db.Product;
+const OrderItem = db.OrderItem;
+const CartItem = db.CartItem;    // 添加 CartItem 导入
 const User = require('../models/user');
 
 // 创建订单并结账
@@ -9,90 +11,124 @@ exports.createOrder = async (req, res) => {
 
     try {
         // 查找用户购物车中的所有商品
-        const cartItems = await CartItem.findAll({ where: { user_id: userId } });
+        const cartItems = await CartItem.findAll({ 
+            where: { user_id: userId },
+            include: [{
+                model: Product,
+                as: 'Product',
+                attributes: ['id', 'name', 'price', 'stock']
+            }]
+        });
 
         if (cartItems.length === 0) {
-            return res.status(400).json({ message: '购物车为空，无法结账' });
+            return res.status(400).json({ 
+                success: false,
+                message: '购物车为空，无法结账' 
+            });
         }
 
         // 计算总金额
         let totalAmount = 0;
-        // 获取购物车中所有商品的ID
-        const productIds = cartItems.map(item => item.product_id);
-        
-        // 批量查询所有商品信息
-        const products = await Product.findAll({
-            where: { id: productIds },
-            attributes: ['id', 'price', 'name']
-        });
-
-        // 遍历购物车项，计算订单总金额
         for (let cartItem of cartItems) {
-            const product = products.find(p => p.id === cartItem.product_id);
-            if (!product) {
-                return res.status(400).json({ message: `商品 ${cartItem.product_id} 不存在` });
+            if (!cartItem.Product) {
+                return res.status(400).json({ 
+                    success: false,
+                    message: `商品 ${cartItem.product_id} 不存在` 
+                });
             }
-            totalAmount += product.price * cartItem.quantity;
+            totalAmount += cartItem.Product.price * cartItem.quantity;
         }
 
         // 创建订单
         const order = await Order.create({
             user_id: userId,
             total_amount: totalAmount,
-            status: '待支付' // 设置订单状态为待支付
+            status: '待支付',
+            order_date: new Date()
         });
 
         // 添加订单项
         for (let cartItem of cartItems) {
-            const product = products.find(p => p.id === cartItem.product_id);
-            if (product) {
-                await OrderItem.create({
-                    orderId: order.id,
-                    productId: product.id,
-                    quantity: cartItem.quantity,
-                    price: product.price
-                });
-            }
+            await OrderItem.create({
+                order_id: order.id,
+                product_id: cartItem.Product.id,
+                quantity: cartItem.quantity,
+                price: cartItem.Product.price
+            });
         }
 
         // 清空购物车
         await CartItem.destroy({ where: { user_id: userId } });
 
         // 返回订单ID
-        res.status(201).json({ message: '订单创建成功', orderId: order.id });
+        res.json({
+            success: true,
+            orderId: order.id,
+            message: '订单创建成功'
+        });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: '创建订单时出错' });
+        console.error('创建订单失败:', error);
+        res.status(500).json({ 
+            success: false,
+            message: '创建订单时出错',
+            error: error.message 
+        });
     }
 };
 
 
-// 查看用户历史订单（分页）
+// 查看用户历史订单
 exports.getOrderHistory = async (req, res) => {
     try {
-        const userId = req.userId;
-        const page = parseInt(req.query.page) || 1;  // 默认分页是第一页
-        const limit = parseInt(req.query.limit) || 10;  // 默认每页显示10条
+        const userId = req.user.id; // 使用 req.user.id 而不是 req.userId
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
 
-        // 查询用户的所有历史订单，支持分页
+        // 修改查询，添加正确的关联别名
         const orders = await Order.findAll({
             where: { user_id: userId },
-            order: [['order_date', 'DESC']],  // 按照订单日期降序排列
+            order: [['order_date', 'DESC']],
             limit: limit,
-            offset: (page - 1) * limit,  // 计算偏移量
+            offset: (page - 1) * limit,
             include: [{
                 model: OrderItem,
+                as: 'orderItems', // 使用正确的别名
                 include: [{
                     model: Product,
-                    attributes: ['name', 'price']  // 加载商品的名称和价格
+                    as: 'product', // 使用正确的别名
+                    attributes: ['name', 'price']
                 }]
             }]
         });
 
-        res.status(200).json({ orders });
+        // 格式化订单数据
+        const formattedOrders = orders.map(order => ({
+            id: order.id,
+            total_amount: Number(order.total_amount),
+            status: order.status,
+            order_date: order.order_date,
+            items: order.orderItems ? order.orderItems.map(item => ({
+                id: item.id,
+                quantity: item.quantity,
+                price: Number(item.price),
+                product: {
+                    name: item.product?.name || '未知商品',
+                    price: Number(item.product?.price || 0)
+                }
+            })) : []
+        }));
+
+        res.status(200).json({
+            success: true,
+            orders: formattedOrders
+        });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: '获取订单历史时出错' });
+        console.error('获取订单历史失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '获取订单历史时出错',
+            error: error.message
+        });
     }
 };
 
@@ -139,40 +175,59 @@ exports.getOrderDetails = async (req, res) => {
     try {
         const { orderId } = req.params;
 
-        if (!orderId) {
-            return res.status(400).json({ message: '订单ID无效' });
-        }
-
-        // 查找订单
-        const order = await Order.findByPk(orderId, {
+        const order = await Order.findOne({
+            where: { id: orderId },
             include: [{
                 model: OrderItem,
+                as: 'orderItems',
                 include: [{
                     model: Product,
-                    attributes: ['name', 'price']
+                    as: 'product',  
+                    attributes: ['id', 'name', 'price', 'imageUrl']
                 }]
             }]
         });
 
         if (!order) {
-            return res.status(404).json({ message: '订单未找到' });
+            return res.status(404).json({
+                success: false,
+                message: '订单未找到'
+            });
         }
 
-        // 为每个订单项添加 `total` 字段
-        const orderItems = order.OrderItems.map(item => ({
-            product: item.Product,
-            quantity: item.quantity,
-            total: item.Product.price * item.quantity  // 添加总价字段
-        }));
+        // 格式化订单数据
+        const formattedOrder = {
+            id: order.id,
+            total_amount: Number(order.total_amount),
+            status: order.status,
+            order_date: order.order_date,
+            items: order.orderItems ? order.orderItems.map(item => ({
+                id: item.id,
+                quantity: item.quantity,
+                price: Number(item.price),
+                total: Number(item.price) * item.quantity,
+                product: {
+                    id: item.product?.id,
+                    name: item.product?.name || '未知商品',
+                    price: Number(item.product?.price || 0),
+                    imageUrl: item.product?.imageUrl
+                }
+            })) : []
+        };
+
+        console.log('格式化后的订单数据:', formattedOrder);
 
         res.status(200).json({
-            id: order.id,
-            items: orderItems,
-            shippingFee: order.shippingFee || 0,
-            totalAmount: order.total_amount
+            success: true,
+            order: formattedOrder
         });
+
     } catch (error) {
-        console.error('获取订单信息失败', error);
-        res.status(500).json({ message: '获取订单信息时出错' });
+        console.error('获取订单信息失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '获取订单信息时出错',
+            error: error.message
+        });
     }
 };

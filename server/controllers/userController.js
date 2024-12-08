@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const User = require('../models/user');
-
+const db = require('../models');  
+const User = db.User;          
 // 用户注册
 exports.register = async (req, res) => {
     try {
@@ -10,13 +10,24 @@ exports.register = async (req, res) => {
         // 检查用户名和邮箱是否已经存在
         const existingUser = await User.findOne({ where: { email } });
         if (existingUser) {
-            return res.status(400).json({ success: false,message: '该邮箱已被使用' });
+            return res.status(400).json({ 
+                success: false, 
+                message: '该邮箱已被使用' 
+            });
         }
 
         const newUser = await User.create({ username, email, password });
-        res.status(201).json({ success: true,message: '注册成功' });
+        res.status(201).json({ 
+            success: true, 
+            message: '注册成功' 
+        });
     } catch (error) {
-        res.status(500).json({ success: false,message: '注册用户时出错' });
+        console.error('注册失败:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '注册用户时出错',
+            error: error.message 
+        });
     }
 };
 
@@ -25,27 +36,39 @@ exports.login = async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-        return res.status(400).json({ success: false, message: "邮箱和密码不能为空" });
+        return res.status(400).json({ 
+            success: false, 
+            message: "邮箱和密码不能为空" 
+        });
     }
 
     try {
-        // 查找用户
-        const user = await User.findOne({ where: { email } });
+        const user = await User.findOne({ 
+            where: { email },
+            attributes: ['id', 'username', 'email', 'password', 'role']
+        });
 
         if (!user) {
-            return res.status(400).json({ success: false, message: "用户不存在" });
+            return res.status(400).json({ 
+                success: false, 
+                message: "用户不存在" 
+            });
         }
 
-        // 比对密码
-        const isMatch = await bcrypt.compare(password, user.password);
+        const isMatch = await user.validatePassword(password);
         if (!isMatch) {
-            return res.status(400).json({ success: false, message: "密码错误" });
+            return res.status(400).json({ 
+                success: false, 
+                message: "密码错误" 
+            });
         }
 
-        // 生成 JWT
-        const token = jwt.sign({ userId: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign(
+            { userId: user.id, role: user.role }, 
+            process.env.JWT_SECRET, 
+            { expiresIn: '1h' }
+        );
 
-        // 返回 token 和用户信息
         res.json({
             success: true,
             message: '登录成功',
@@ -60,10 +83,13 @@ exports.login = async (req, res) => {
 
     } catch (error) {
         console.error("登录时出错:", error);
-        res.status(500).json({ success: false, message: "服务器错误" });
+        res.status(500).json({ 
+            success: false, 
+            message: "服务器错误",
+            error: error.message 
+        });
     }
 };
-
 
 exports.verifyToken = (requiredRole) => {
     return (req, res, next) => {

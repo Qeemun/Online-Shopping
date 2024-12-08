@@ -1,78 +1,80 @@
 <!DOCTYPE html>
 <html lang="zh-cn">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>购物车 - 在线商店</title>
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/common.css">
     <link rel="stylesheet" href="css/cart.css">
+    <link rel="stylesheet" href="css/animations.css">
 </head>
-
 <body>
-    <!-- Header -->
     <header>
-        <h1>在线商店</h1>
-        <nav>
-            <a href="index.html">首页</a>
-            <a href="checkout.html" id="checkout-link">结账</a>
-        </nav>
+        <div class="container">
+            <h1>在线商店</h1>
+            <nav>
+                <a href="index.html">继续购物</a>
+                <a href="orderHistory.html">我的订单</a>  
+            </nav>
+        </div>
     </header>
 
-    <!-- Cart Section -->
-    <section id="cart-section">
-        <h2>我的购物车</h2>
+    <main class="container">
+        <section id="cart-section">
+            <h2>我的购物车</h2>
 
-        <!-- 购物车商品列表 -->
-        <table id="cart-items">
-            <thead>
-                <tr>
-                    <th>商品名称</th>
-                    <th>数量</th>
-                    <th>单价</th>
-                    <th>总价</th>
-                    <th>操作</th>
-                </tr>
-            </thead>
-            <tbody id="cart-items-body">
-                <!-- 购物车商品将动态加载 -->
-            </tbody>
-        </table>
+            <div id="loading-indicator" class="loading-indicator">
+                <div class="spinner"></div>
+                <span>正在加载购物车...</span>
+            </div>
 
-        <!-- 购物车总金额 -->
-        <div id="cart-total">
-            <p>总金额: <span id="total-price">加载中...</span> 元</p>
-        </div>
+            <div id="error-message" class="error-message" style="display: none">
+                加载失败，请重试
+            </div>
 
-        <!-- 如果购物车为空，显示提示信息 -->
-        <p id="empty-cart-message" style="display: none;">您的购物车为空！</p>
-    </section>
+            <div id="empty-cart-message" class="empty-cart" style="display: none">
+                <p>您的购物车是空的！</p>
+                <a href="index.html" class="btn btn-primary">去购物</a>
+            </div>
 
-    <!-- Footer -->
+            <div id="cart-content" style="display: none">
+                <table id="cart-items" class="cart-table">
+                    <thead>
+                        <tr>
+                            <th>商品图片</th>
+                            <th>商品名称</th>
+                            <th>数量</th>
+                            <th>单价</th>
+                            <th>总价</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cart-items-body"></tbody>
+                </table>
+
+                <div class="cart-total">
+                    <p>总金额: <span id="total-price">¥0.00</span></p>
+                </div>
+
+                <div id="cart-actions" class="cart-actions">
+                    <button onclick="window.location.href='index.html'" class="btn btn-secondary">
+                        继续购物
+                    </button>
+                    <button onclick="checkout()" id="checkout-button" class="btn btn-primary">
+                        去结算
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
     <footer>
-        <p>&copy; 2024 在线商店. 版权所有</p>
+        <div class="container">
+            <p>&copy; 2024 在线商店. 版权所有</p>
+        </div>
     </footer>
 
     <script src="js/cart.js"></script>
-    <script>
-        function getOrderIdFromCart() {
-            // 从本地存储中获取购物车和订单ID
-            const cart = JSON.parse(localStorage.getItem('cart')) || [];
-            const orderId = localStorage.getItem('orderId');  
-            return orderId;  // 返回订单ID
-        }
-
-        // 在页面加载时，动态构建结账链接
-        document.addEventListener('DOMContentLoaded', () => {
-            const orderId = getOrderIdFromCart();  // 获取订单ID
-            if (orderId) {
-                // 如果订单ID有效，将其附加到结账链接上
-                const checkoutLink = document.getElementById('checkout-link');
-                checkoutLink.href = `checkout.html?orderId=${orderId}`;
-            } else {
-                alert('无法找到有效的订单ID');
-            }
-        });
-    </script>
 </body>
-
 </html>
