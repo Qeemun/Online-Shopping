@@ -40,9 +40,16 @@ exports.upload = upload;
 exports.getAllProducts = async (req, res) => {
     try {
         const products = await Product.findAll();
+        
+        // 格式化产品数据，添加完整的图片URL
+        const formattedProducts = products.map(product => ({
+            ...product.toJSON(),
+            imageUrl: product.imageUrl ? `http://localhost:3000${product.imageUrl}` : 'http://localhost:3000/images/default-product.jpg'
+        }));
+
         res.status(200).json({
             success: true,
-            products: products
+            products: formattedProducts
         });
     } catch (error) {
         console.error('获取产品列表失败:', error);

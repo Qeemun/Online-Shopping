@@ -33,9 +33,7 @@ module.exports = (sequelize) => {
         imageUrl: {
             type: DataTypes.STRING,
             allowNull: true,
-            validate: {
-                isUrl: true
-            }
+            field: 'image_url',
         },
         stock: {
             type: DataTypes.INTEGER,

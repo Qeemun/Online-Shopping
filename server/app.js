@@ -16,6 +16,10 @@ app.use(express.json());  // 解析 JSON 请求体
 
 app.use(cors());  // 允许所有来源的请求
 
+// 配置静态文件服务
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+app.use('/images', express.static(path.join(__dirname, 'public/images')));
+
 // 用户相关路由
 app.use('/users', userRoutes);
 // 注册产品相关路由

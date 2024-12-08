@@ -1,6 +1,6 @@
 // 获取所有产品并展示
 function loadProducts(query = '') {
-    fetch('http://localhost:3000/products/')  // 假设从后端获取所有产品
+    fetch('http://localhost:3000/products/') 
         .then(response => response.json())
         .then(products => {
             const filteredProducts = filterProducts(products, query);

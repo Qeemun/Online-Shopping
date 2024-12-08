@@ -69,7 +69,7 @@ function loadProducts() {
                     const productElement = document.createElement('div');
                     productElement.classList.add('product-item');
                     productElement.innerHTML = `
-                        <img src="${product.imageUrl || 'images/default.jpg'}" alt="${product.name}" />
+                        <img src="${product.imageUrl}" alt="${product.name}" />
                         <h3>${product.name}</h3>
                         <p class="price">¥${product.price}</p>
                         <p class="stock">库存: ${product.stock}</p>
