@@ -22,54 +22,29 @@ module.exports = (sequelize) => {
         },
         user_id: {
             type: DataTypes.INTEGER,
-            allowNull: false,
-            references: {
-                model: 'Users',
-                key: 'id'
-            }
+            allowNull: false
         },
         product_id: {
             type: DataTypes.INTEGER,
-            allowNull: true,
-            references: {
-                model: 'Products',
-                key: 'id'
-            }
+            allowNull: true
         },
         action: {
             type: DataTypes.STRING,
-            allowNull: false,
-            validate: {
-                notEmpty: true
-            }
+            allowNull: false
         },
         description: {
-            type: DataTypes.TEXT,
+            type: DataTypes.STRING,
             allowNull: true
         },
         ip_address: {
             type: DataTypes.STRING,
             allowNull: true
-        },
-        created_at: {
-            type: DataTypes.DATE,
-            defaultValue: DataTypes.NOW
         }
     }, {
         sequelize,
         modelName: 'CustomerLog',
         tableName: 'customer_logs',
-        timestamps: true, // 改为 true，让 Sequelize 自动管理时间戳
-        createdAt: 'created_at', // 指定创建时间字段名
-        updatedAt: 'updated_at', // 指定更新时间字段名
-        indexes: [
-            {
-                fields: ['user_id']
-            },
-            {
-                fields: ['product_id']
-            }
-        ]
+        timestamps: false
     });
 
     return CustomerLog;

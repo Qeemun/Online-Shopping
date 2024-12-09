@@ -154,6 +154,11 @@ exports.updateProduct = async (req, res) => {
             });
         }
 
+        // 更新图片
+        if (req.file) {
+            updates.imageUrl = `/uploads/${req.file.filename}`;
+        }
+
         await product.update(updates);
 
         res.status(200).json({

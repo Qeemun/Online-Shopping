@@ -12,7 +12,12 @@ router.get('/history', authenticate, orderController.getOrderHistory);
 // 获取订单详情
 router.get('/:orderId', authenticate, orderController.getOrderDetails);
 
-// 更新订单状态
-router.put('/update/:orderId', authenticate, orderController.updateOrderStatus);
+// 获取所有订单
+router.get('/',  orderController.getAllOrders);
 
+// 更新订单状态和信息
+router.put('/update/:orderId', orderController.updateOrderStatus);
+
+// 删除订单
+router.delete('/:orderId', orderController.deleteOrder);
 module.exports = router;

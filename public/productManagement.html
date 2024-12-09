@@ -4,7 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>商品管理 - 销售管理</title>
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/animations.css">
 </head>
 
 <body>
@@ -25,7 +29,7 @@
         <!-- 新产品添加表单 -->
         <div id="add-product-form" style="display: none;">
             <h3>添加新产品</h3>
-            <form id="product-form" enctype="multipart/form-data">
+            <form id="product-form" enctype="multipart/form-data" onsubmit="addProduct(event)">
                 <div class="form-group">
                     <label for="product-name">商品名称:</label>
                     <input type="text" id="product-name" required>
@@ -44,6 +48,32 @@
                     <img id="image-preview" style="max-width: 200px; display: none;">
                 </div>
                 <button type="submit">添加商品</button>
+            </form>
+        </div>
+
+        <!-- 编辑产品表单 -->
+        <div id="edit-product-form" style="display: none;">
+            <h3>编辑产品</h3>
+            <form id="edit-form" enctype="multipart/form-data" onsubmit="updateProduct(event)">
+                <input type="hidden" id="edit-product-id">
+                <div class="form-group">
+                    <label for="edit-product-name">商品名称:</label>
+                    <input type="text" id="edit-product-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-product-price">价格:</label>
+                    <input type="number" id="edit-product-price" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-product-stock">库存:</label>
+                    <input type="number" id="edit-product-stock" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-product-image">商品图片:</label>
+                    <input type="file" id="edit-product-image" accept="image/*">
+                    <img id="edit-image-preview" style="max-width: 200px; display: none;">
+                </div>
+                <button type="submit">更新商品</button>
             </form>
         </div>
 
@@ -68,10 +98,10 @@
 
     <!-- Footer -->
     <footer>
-        <p>&copy; 2024 在线商店. 版权所有</p>
+        <p>&copy; 2024 牧燕小站</p>
     </footer>
 
-    <script src="js/adminProduct.js"></script>
+    <script src="js/productManagement.js"></script>
 </body>
 
 </html>

@@ -46,7 +46,7 @@ const sendOrderConfirmationEmail = async (email, order) => {
     }
 };
 
-// 修改支付处理函数，添加邮件发送错误处理
+// 支付处理函数，添加邮件发送错误处理
 exports.processPayment = async (req, res) => {
     const { orderId } = req.body;
 

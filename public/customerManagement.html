@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="zh-cn">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>客户管理 - 销售管理</title>
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/animations.css">
 </head>
 
 <body>
@@ -18,9 +21,48 @@
         </nav>
     </header>
 
-    <!-- Customer Management Section -->
     <section id="customer-management">
         <h2>顾客信息</h2>
+        <button id="add-customer-btn" onclick="showAddCustomerForm()">添加新客户</button>
+
+        <!-- 新客户添加表单 -->
+        <div id="add-customer-form" style="display: none;">
+            <h3>添加新客户</h3>
+            <form id="add-form" onsubmit="addCustomer(event)">
+                <div class="form-group">
+                    <label for="add-customer-username">用户名:</label>
+                    <input type="text" id="add-customer-username" required>
+                </div>
+                <div class="form-group">
+                    <label for="add-customer-email">邮箱:</label>
+                    <input type="email" id="add-customer-email" required>
+                </div>
+                <div class="form-group">
+                    <label for="add-customer-password">密码:</label>
+                    <input type="password" id="add-customer-password" required>
+                </div>
+                <button type="submit">添加客户</button>
+            </form>
+        </div>
+
+        <!-- 编辑客户表单 -->
+        <div id="edit-customer-form" style="display: none;">
+            <h3>编辑客户</h3>
+            <form id="edit-form" onsubmit="updateCustomer(event)">
+                <input type="hidden" id="edit-customer-id">
+                <div class="form-group">
+                    <label for="edit-customer-username">用户名:</label>
+                    <input type="text" id="edit-customer-username" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-customer-email">邮箱:</label>
+                    <input type="email" id="edit-customer-email" required>
+                </div>
+                <button type="submit">更新客户</button>
+            </form>
+        </div>
+
+        <!-- 顾客列表 -->
         <table id="customer-table">
             <thead>
                 <tr>
@@ -34,6 +76,7 @@
             </tbody>
         </table>
 
+        <!-- 顾客日志 -->
         <div id="customer-logs">
             <h3>浏览/购买日志</h3>
             <ul id="customer-log-list">
@@ -44,10 +87,9 @@
 
     <!-- Footer -->
     <footer>
-        <p>&copy; 2024 在线商店. 版权所有</p>
+        <p>&copy; 2024 牧燕小站</p>
     </footer>
 
     <script src="js/customerManagement.js"></script>
 </body>
-
 </html>

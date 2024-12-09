@@ -3,7 +3,7 @@ const Order = db.Order;
 const Product = db.Product;
 const OrderItem = db.OrderItem;
 const CartItem = db.CartItem;    // 添加 CartItem 导入
-const User = require('../models/user');
+const User = db.User;
 
 // 创建订单并结账
 exports.createOrder = async (req, res) => {
@@ -136,37 +136,23 @@ exports.getOrderHistory = async (req, res) => {
 exports.updateOrderStatus = async (req, res) => {
     try {
         const { orderId } = req.params;
-        const { status } = req.body;
+        const updates = req.body;
 
-        // 检查订单状态是否合法
-        if (!['待支付', '已支付', '已发货', '已完成'].includes(status)) {
-            return res.status(400).json({ message: '无效的订单状态' });
-        }
-
-        // 查找订单
         const order = await Order.findByPk(orderId);
         if (!order) {
-            return res.status(404).json({ message: '订单不存在' });
+            return res.status(404).json({ success: false, message: '订单不存在' });
         }
 
-        // 只有订单的状态为 '待支付' 或 '已支付' 才能更新
-        if (order.status === '已完成' || order.status === '已发货') {
-            return res.status(400).json({ message: '已完成或已发货的订单无法更改状态' });
-        }
+        Object.keys(updates).forEach(key => {
+            order[key] = updates[key];
+        });
 
-        // 检查订单是否已经支付
-        if (order.status === '已支付' && status === '待支付') {
-            return res.status(400).json({ message: '支付状态订单无法修改为待支付' });
-        }
-
-        // 更新订单状态
-        order.status = status;
         await order.save();
 
-        res.status(200).json({ message: '订单状态更新成功', order });
+        res.status(200).json({ success: true, message: '订单更新成功', order });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: '更新订单状态时出错' });
+        console.error('更新订单失败:', error);
+        res.status(500).json({ success: false, message: '更新订单失败' });
     }
 };
 
@@ -177,15 +163,10 @@ exports.getOrderDetails = async (req, res) => {
 
         const order = await Order.findOne({
             where: { id: orderId },
-            include: [{
-                model: OrderItem,
-                as: 'orderItems',
-                include: [{
-                    model: Product,
-                    as: 'product',  
-                    attributes: ['id', 'name', 'price', 'imageUrl']
-                }]
-            }]
+            include: [
+                { model: User, as: 'user', attributes: ['username'] },
+                { model: OrderItem, as: 'orderItems', include: [{ model: Product, as: 'product', attributes: ['name', 'price', 'imageUrl'] }] }
+            ]
         });
 
         if (!order) {
@@ -215,8 +196,6 @@ exports.getOrderDetails = async (req, res) => {
             })) : []
         };
 
-        console.log('格式化后的订单数据:', formattedOrder);
-
         res.status(200).json({
             success: true,
             order: formattedOrder
@@ -229,5 +208,47 @@ exports.getOrderDetails = async (req, res) => {
             message: '获取订单信息时出错',
             error: error.message
         });
+    }
+};
+
+// 获取所有订单
+exports.getAllOrders = async (req, res) => {
+    try {
+        const orders = await Order.findAll({
+            include: [
+                { model: User, as: 'user', attributes: ['username'] },
+                { model: OrderItem, as: 'orderItems', include: [{ model: Product, as: 'product', attributes: ['name', 'price'] }] }
+            ]
+        });
+
+        // 确保 total_amount 是数字类型
+        const formattedOrders = orders.map(order => ({
+            ...order.toJSON(),
+            total_amount: Number(order.total_amount)
+        }));
+
+        res.status(200).json({ success: true, orders: formattedOrders });
+    } catch (error) {
+        console.error('获取订单失败:', error);
+        res.status(500).json({ success: false, message: '获取订单失败' });
+    }
+};
+
+// 删除订单
+exports.deleteOrder = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+
+        const order = await Order.findByPk(orderId);
+        if (!order) {
+            return res.status(404).json({ success: false, message: '订单不存在' });
+        }
+
+        await order.destroy();
+
+        res.status(200).json({ success: true, message: '订单删除成功' });
+    } catch (error) {
+        console.error('删除订单失败:', error);
+        res.status(500).json({ success: false, message: '删除订单失败' });
     }
 };

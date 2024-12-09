@@ -8,6 +8,7 @@ const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const cartRoutes = require('./routes/cartRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const customerRoutes = require('./routes/customerRoutes');
 const sequelize = require('./config/database');
 const db = require('./models'); // 导入并初始化模型关联
 
@@ -28,6 +29,7 @@ app.use('/products', productRoutes);
 app.use('/orders', orderRoutes);
 app.use('/cart', cartRoutes);
 app.use('/pay', paymentRoutes);
+app.use('/customers', customerRoutes);
 
 // 提供 public 目录中的静态文件
 app.use(express.static(path.join(__dirname, 'public')));
