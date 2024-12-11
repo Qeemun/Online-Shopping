@@ -3,6 +3,8 @@ const Order = db.Order;
 const User = db.User;
 const OrderItem = db.OrderItem; 
 const Product = db.Product;   
+const nodemailer = require('nodemailer');
+
 // 发送电子邮件确认发货
 const sendOrderConfirmationEmail = async (email, order) => {
     try {
@@ -62,6 +64,11 @@ exports.processPayment = async (req, res) => {
                     as: 'product',
                     attributes: ['id', 'stock']
                 }]
+            },
+            {
+                model: User, // 加载用户信息
+                as: 'user',
+                attributes: ['email'] // 只加载用户的邮箱
             }]
         });
 
@@ -94,12 +101,15 @@ exports.processPayment = async (req, res) => {
         await order.save();
 
         // 尝试发送支付确认邮件
-        if (order.user?.email) {
+        if (order.user && order.user.email) {
             try {
                 await sendOrderConfirmationEmail(order.user.email, order);
+                console.log(`支付确认邮件已发送至 ${order.user.email}`);
             } catch (emailError) {
                 console.error('邮件发送失败，但支付流程已完成:', emailError);
             }
+        } else {
+            console.warn('未找到订单用户的邮箱地址，无法发送确认邮件');
         }
 
         res.status(200).json({ 

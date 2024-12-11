@@ -139,6 +139,7 @@ function showLoading(isLoading) {
 // 退出登录
 function logout() {
     localStorage.removeItem('user'); // 清除本地存储中的用户信息
+    localStorage.removeItem('token');
     window.location.href = 'login.html'; // 跳转到登录页面
 }
 
