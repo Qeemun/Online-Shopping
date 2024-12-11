@@ -1,8 +1,8 @@
-const nodemailer = require('nodemailer');
 const db = require('../models');
 const Order = db.Order;
 const User = db.User;
-
+const OrderItem = db.OrderItem; 
+const Product = db.Product;   
 // 发送电子邮件确认发货
 const sendOrderConfirmationEmail = async (email, order) => {
     try {
@@ -51,12 +51,17 @@ exports.processPayment = async (req, res) => {
     const { orderId } = req.body;
 
     try {
+        // 获取订单和相关信息
         const order = await Order.findOne({
             where: { id: orderId },
             include: [{
-                model: User,
-                as: 'user',
-                attributes: ['email']
+                model: OrderItem,
+                as: 'orderItems',
+                include: [{
+                    model: Product,
+                    as: 'product',
+                    attributes: ['id', 'stock']
+                }]
             }]
         });
 
@@ -67,11 +72,28 @@ exports.processPayment = async (req, res) => {
             });
         }
 
+        // 检查库存是否足够
+        for (const orderItem of order.orderItems) {
+            if (orderItem.product.stock < orderItem.quantity) {
+                return res.status(400).json({ 
+                    success: false,
+                    message: `商品 ${orderItem.product.id} 的库存不足`
+                });
+            }
+        }
+
+        // 扣减库存
+        for (const orderItem of order.orderItems) {
+            const product = orderItem.product;
+            product.stock -= orderItem.quantity;
+            await product.save();
+        }
+
         // 更新订单状态为已支付
         order.status = '已支付';
         await order.save();
 
-        // 尝试发送邮件，但不阻止支付成功响应
+        // 尝试发送支付确认邮件
         if (order.user?.email) {
             try {
                 await sendOrderConfirmationEmail(order.user.email, order);
@@ -82,7 +104,7 @@ exports.processPayment = async (req, res) => {
 
         res.status(200).json({ 
             success: true,
-            message: '支付成功，订单已确认' 
+            message: '支付成功，订单已确认并扣减库存'
         });
 
     } catch (error) {
