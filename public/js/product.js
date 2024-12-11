@@ -25,7 +25,7 @@ function displayProducts(products) {
     products.forEach(product => {
         const productCard = `
             <div class="product-card">
-                <img src="${product.imageUrl}" alt="${product.name}">
+                <img src="http://localhost:3000${item.Product.imageUrl}" alt="${product.name}">
                 <h3>${product.name}</h3>
                 <p>${product.price}元</p>
                 <a href="productDetails.html?id=${product.id}">查看详情</a>

@@ -54,7 +54,7 @@ function showEditProductForm(productId) {
                 document.getElementById('edit-product-name').value = product.name;
                 document.getElementById('edit-product-price').value = product.price;
                 document.getElementById('edit-product-stock').value = product.stock;
-                document.getElementById('edit-image-preview').src = product.imageUrl;
+                document.getElementById('edit-image-preview').src = `http://localhost:3000${product.imageUrl}`;
                 document.getElementById('edit-image-preview').style.display = 'block';
                 document.getElementById('edit-product-form').style.display = 'block';
             } else {

@@ -46,7 +46,7 @@ function loadCart() {
         data.cartItems.forEach(item => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td><img src="${item.Product.imageUrl}" alt="${item.Product.name}"></td>
+                <td><img src="http://localhost:3000${item.Product.imageUrl}" alt="${item.Product.name}"></td>
                 <td>${item.Product.name}</td>
                 <td>
                     <input type="number" 
