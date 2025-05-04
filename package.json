@@ -7,15 +7,18 @@
     "dev": "nodemon app.js"
   },
   "dependencies": {
+    "@faker-js/faker": "^9.7.0",
     "bcryptjs": "^2.4.3",
-    "dotenv": "^16.4.7",
+    "dotenv": "^16.5.0",
     "express": "^4.21.2",
+    "faker": "^5.5.3",
     "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.14.1",
     "nodemailer": "^6.9.16",
-    "sequelize": "^6.6.2"
+    "sequelize": "^6.37.7"
   },
   "devDependencies": {
-    "sequelize-cli": "^6.6.2",
-    "nodemon": "^2.0.13"
+    "nodemon": "^2.0.13",
+    "sequelize-cli": "^6.6.2"
   }
 }

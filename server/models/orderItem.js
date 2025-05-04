@@ -4,13 +4,13 @@ module.exports = (sequelize) => {
     class OrderItem extends Model {
         static associate(models) {
             OrderItem.belongsTo(models.Order, {
-                foreignKey: 'order_id',
+                foreignKey: 'orderId',
                 as: 'order'
             });
             
             OrderItem.belongsTo(models.Product, {
-                foreignKey: 'product_id',
-                as: 'product'  // 确保这个别名和查询中使用的一致
+                foreignKey: 'productId',
+                as: 'product'
             });
         }
     }
@@ -21,7 +21,7 @@ module.exports = (sequelize) => {
             primaryKey: true,
             autoIncrement: true
         },
-        order_id: {
+        orderId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             references: {
@@ -29,7 +29,7 @@ module.exports = (sequelize) => {
                 key: 'id'
             }
         },
-        product_id: {
+        productId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             references: {
@@ -47,13 +47,20 @@ module.exports = (sequelize) => {
         price: {
             type: DataTypes.DECIMAL(10, 2),
             allowNull: false
+        },
+        createdAt: {
+            type: DataTypes.DATE,
+            defaultValue: DataTypes.NOW
+        },
+        updatedAt: {
+            type: DataTypes.DATE,
+            defaultValue: DataTypes.NOW
         }
     }, {
         sequelize,
         modelName: 'OrderItem',
-        tableName: 'order_items',
-        timestamps: false,
-        underscored: true
+        tableName: 'orderItems',
+        timestamps: true
     });
 
     return OrderItem;

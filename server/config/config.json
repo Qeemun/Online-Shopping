@@ -1,14 +1,23 @@
 {
   "development": {
-    "use_env_variable": "DATABASE_URL",
+    "username": "root",
+    "password": "796378",
+    "database": "online_shop",
+    "host": "localhost",
     "dialect": "mysql"
   },
   "test": {
-    "use_env_variable": "DATABASE_URL",
+    "username": "root",
+    "password": "796378",
+    "database": "online_shop",
+    "host": "localhost",
     "dialect": "mysql"
   },
   "production": {
-    "use_env_variable": "DATABASE_URL",
+    "username": "root",
+    "password": "796378",
+    "database": "online_shop",
+    "host": "localhost",
     "dialect": "mysql"
   }
 }

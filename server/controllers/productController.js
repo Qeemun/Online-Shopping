@@ -36,16 +36,46 @@ const upload = multer({
 // 导出 multer 配置
 exports.upload = upload;
 
-// 获取所有产品
+// 修改getAllProducts函数以支持类别筛选
+
 exports.getAllProducts = async (req, res) => {
     try {
-        const products = await Product.findAll();
+        let whereCondition = {};
         
-        // 格式化产品数据，添加完整的图片URL
-        const formattedProducts = products.map(product => ({
-            ...product.toJSON(),
-            imageUrl: product.imageUrl ? `http://localhost:3000${product.imageUrl}` : 'http://localhost:3000/images/default-product.jpg'
-        }));
+        // 仅按商品名称搜索
+        if (req.query.search) {
+            const searchTerm = req.query.search.trim();
+            whereCondition = {
+                name: { 
+                    [db.Sequelize.Op.like]: `%${searchTerm}%` 
+                }
+            };
+        }
+        
+        // 添加类别筛选条件
+        if (req.query.category) {
+            whereCondition.category = req.query.category;
+        }
+        
+        // 使用条件查询产品
+        const products = await Product.findAll({ 
+            where: whereCondition,
+            order: [
+                ['createdAt', 'DESC']
+            ]
+        });
+        
+        // 格式化产品数据
+        const formattedProducts = products.map(product => {
+            const productJson = product.toJSON();
+            
+            // 处理图片URL
+            if (productJson.imageUrl && !productJson.imageUrl.startsWith('http')) {
+                productJson.imageUrl = `http://localhost:3000${productJson.imageUrl}`;
+            }
+            
+            return productJson;
+        });
 
         res.status(200).json({
             success: true,

@@ -7,7 +7,7 @@ module.exports = {
       {
         username: 'testuser1',
         email: 'testuser1@example.com',
-        password: 'hashed_password_1', // 你可以根据需要替换为加密后的密码
+        password: 'hashed_password_1', // 可以根据需要替换为加密后的密码
         role: 'customer',
         createdAt: new Date(),
         updatedAt: new Date(),

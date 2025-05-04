@@ -4,11 +4,11 @@ module.exports = (sequelize) => {
     class CartItem extends Model {
         static associate(models) {
             CartItem.belongsTo(models.Product, {
-                foreignKey: 'product_id',
+                foreignKey: 'productId',
                 as: 'Product'
             });
             CartItem.belongsTo(models.User, {
-                foreignKey: 'user_id',
+                foreignKey: 'userId',
                 as: 'user'
             });
         }
@@ -20,19 +20,19 @@ module.exports = (sequelize) => {
             primaryKey: true,
             autoIncrement: true
         },
-        user_id: {
+        userId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             references: {
-                model: 'Users',
+                model: 'users',
                 key: 'id'
             }
         },
-        product_id: {
+        productId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             references: {
-                model: 'Products',
+                model: 'products',
                 key: 'id'
             }
         },
@@ -44,19 +44,27 @@ module.exports = (sequelize) => {
                 min: 1
             }
         },
-        added_at: {
+        addedAt: {
+            type: DataTypes.DATE,
+            defaultValue: DataTypes.NOW
+        },
+        createdAt: {
+            type: DataTypes.DATE,
+            defaultValue: DataTypes.NOW
+        },
+        updatedAt: {
             type: DataTypes.DATE,
             defaultValue: DataTypes.NOW
         }
     }, {
         sequelize,
         modelName: 'CartItem',
-        tableName: 'cart_items',
-        timestamps: false,
+        tableName: 'cartItems',
+        timestamps: true,
         indexes: [
             {
                 unique: true,
-                fields: ['user_id', 'product_id']
+                fields: ['userId', 'productId']
             }
         ]
     });
