@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>销售人员管理 - 管理员</title>
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <h1>销售人员管理</h1>
+        <nav>
+            <a href="adminDashboard.html">返回管理面板</a>
+            <a href="index.html">首页</a>
+        </nav>
+    </header>
+
+    <!-- Sales Staff Management Section -->
+    <section id="sales-staff-management">
+        <h2>销售人员管理</h2>
+        <button onclick="document.getElementById('add-staff-form').style.display = 'block'">添加销售人员</button>
+        
+        <!-- 添加销售人员表单 -->
+        <div id="add-staff-form" style="display: none;">
+            <h3>添加销售人员</h3>
+            <form onsubmit="addSalesStaff(event)">
+                <div class="form-group">
+                    <label for="staff-username">用户名:</label>
+                    <input type="text" id="staff-username" required>
+                </div>
+                <div class="form-group">
+                    <label for="staff-email">邮箱:</label>
+                    <input type="email" id="staff-email" required>
+                </div>
+                <div class="form-group">
+                    <label for="staff-password">初始密码:</label>
+                    <input type="password" id="staff-password" required>
+                </div>
+                <button type="submit">添加</button>
+            </form>
+        </div>
+        
+        <!-- 销售人员列表 -->
+        <table id="sales-staff-table">
+            <thead>
+                <tr>
+                    <th>用户名</th>
+                    <th>邮箱</th>
+                    <th>最后登录时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="sales-staff-body">
+                <!-- 销售人员信息将动态加载 -->
+            </tbody>
+        </table>
+        
+        <!-- 销售人员负责的商品 -->
+        <div id="staff-products-container" style="display: none;">
+            <h3>负责的商品</h3>
+            <div id="staff-products-list">
+                <!-- 商品信息将动态加载 -->
+            </div>
+            
+            <!-- 分配商品表单 -->
+            <h4>分配商品</h4>
+            <form onsubmit="assignProductToStaff(event)">
+                <input type="hidden" id="staff-id-for-assignment">
+                <div class="form-group">
+                    <label for="product-to-assign">选择商品:</label>
+                    <select id="product-to-assign" required>
+                        <!-- 商品选项将动态加载 -->
+                    </select>
+                </div>
+                <button type="submit">分配</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2024 牧燕小站</p>
+    </footer>
+
+    <script src="js/salesStaffManagement.js"></script>
+</body>
+</html>

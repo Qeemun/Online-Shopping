@@ -1,0 +1,125 @@
+/* 管理员控制面板样式 */
+#admin-dashboard {
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+#admin-dashboard h2 {
+    margin-bottom: 20px;
+    color: #343a40;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #007bff;
+}
+
+#admin-dashboard ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+    padding: 0;
+    list-style-type: none;
+}
+
+#admin-dashboard li {
+    background-color: #fff;
+    border-radius: 5px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+#admin-dashboard li:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+#admin-dashboard a {
+    display: block;
+    padding: 20px;
+    color: #495057;
+    text-decoration: none;
+    text-align: center;
+    font-weight: 500;
+    font-size: 16px;
+}
+
+#admin-dashboard a:hover {
+    color: #007bff;
+}
+
+/* 系统概览部分 */
+#admin-summary {
+    padding: 20px;
+}
+
+#admin-summary h2 {
+    margin-bottom: 20px;
+    color: #343a40;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #28a745;
+}
+
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+}
+
+.summary-card {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    transition: transform 0.3s;
+}
+
+.summary-card:hover {
+    transform: translateY(-5px);
+}
+
+.summary-card:nth-child(1) {
+    border-top: 4px solid #007bff;
+}
+
+.summary-card:nth-child(2) {
+    border-top: 4px solid #28a745;
+}
+
+.summary-card:nth-child(3) {
+    border-top: 4px solid #ffc107;
+}
+
+.summary-card:nth-child(4) {
+    border-top: 4px solid #dc3545;
+}
+
+.summary-card h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #495057;
+    font-size: 16px;
+}
+
+.summary-card p {
+    font-size: 24px;
+    font-weight: bold;
+    margin: 0;
+    color: #343a40;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    #admin-dashboard ul {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .summary-cards {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 576px) {
+    #admin-dashboard ul,
+    .summary-cards {
+        grid-template-columns: 1fr;
+    }
+}

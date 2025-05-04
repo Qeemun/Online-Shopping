@@ -1,0 +1,134 @@
+/* 销售人员管理页面样式 */
+#sales-staff-management {
+    padding: 20px;
+}
+
+#add-staff-form,
+#staff-products-container {
+    background-color: #fff;
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 5px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+#add-staff-form h3,
+#staff-products-container h3 {
+    margin-top: 0;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 10px;
+    color: #495057;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.form-group input, 
+.form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #0069d9;
+}
+
+#sales-staff-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+#sales-staff-table th,
+#sales-staff-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+#sales-staff-table th {
+    background-color: #f8f9fa;
+    color: #495057;
+    font-weight: 600;
+}
+
+#sales-staff-table tr:hover {
+    background-color: #f8f9fa;
+    transition: background-color 0.3s;
+}
+
+#sales-staff-table button {
+    margin-right: 5px;
+    padding: 6px 10px;
+    font-size: 13px;
+}
+
+#staff-products-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.product-item {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.product-item h4 {
+    margin-top: 0;
+    color: #495057;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 8px;
+}
+
+.product-item p {
+    margin: 5px 0;
+    font-size: 14px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    #sales-staff-table {
+        font-size: 14px;
+    }
+    
+    #sales-staff-table th,
+    #sales-staff-table td {
+        padding: 8px 10px;
+    }
+    
+    #sales-staff-table button {
+        margin-bottom: 5px;
+        display: block;
+        width: 100%;
+    }
+    
+    #staff-products-list {
+        grid-template-columns: 1fr;
+    }
+}

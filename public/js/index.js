@@ -288,11 +288,7 @@ function displayFilteredProducts(products) {
         return;
     }
     
-    // 创建产品网格容器
-    const productsGrid = document.createElement('div');
-    productsGrid.className = 'products-grid';
-    
-    // 添加产品项
+    // 直接向产品列表添加产品项，不使用额外的网格容器
     products.forEach(product => {
         const productElement = document.createElement('div');
         productElement.classList.add('product-item');
@@ -303,23 +299,19 @@ function displayFilteredProducts(products) {
             imageUrl = `/${imageUrl}`;
         }
         
-        // 简化显示内容，提高密度
+        // 简化产品卡片内容，提高展示密度
         productElement.innerHTML = `
             <img src="${imageUrl}" alt="${product.name}" onerror="this.src='/images/default-product.jpg'"/>
             <h3 title="${product.name}">${product.name}</h3>
             <p class="price">¥${product.price}</p>
-            <p class="stock">库存: ${product.stock}</p>
-            <div class="product-buttons">
+            <div class="button-group">
                 <button class="view-details" data-id="${product.id}">查看</button>
                 <button class="add-to-cart" data-id="${product.id}">加购</button>
             </div>
         `;
         
-        productsGrid.appendChild(productElement);
+        productList.appendChild(productElement);
     });
-    
-    // 将产品网格添加到页面
-    productList.appendChild(productsGrid);
     
     // 绑定按钮事件
     document.querySelectorAll('.view-details').forEach(button => {
@@ -393,18 +385,20 @@ function addToCart(productId) {
     }
 
     // 显示加载状态
-    const button = document.querySelector(`button[data-id="${productId}"]`);
-    button.disabled = true;
-    button.textContent = '添加中...';
+    const button = document.querySelector(`.add-to-cart[data-id="${productId}"]`);
+    if (button) {
+        button.disabled = true;
+        button.textContent = '添加中...';
+    }
 
-    fetch('http://localhost:3000/cart/add', {
+    fetch('http://localhost:3000/cart', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-            product_id: productId,
+            productId: parseInt(productId),
             quantity: 1
         })
     })
@@ -415,6 +409,8 @@ function addToCart(productId) {
             if (goToCart) {
                 window.location.href = 'cart.html';
             }
+        } else {
+            alert(data.message || '添加失败，请重试');
         }
     })
     .catch(error => {
@@ -423,7 +419,9 @@ function addToCart(productId) {
     })
     .finally(() => {
         // 恢复按钮状态
-        button.disabled = false;
-        button.textContent = '添加到购物车';
+        if (button) {
+            button.disabled = false;
+            button.textContent = '加购';
+        }
     });
 }

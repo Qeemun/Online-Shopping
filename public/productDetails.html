@@ -39,6 +39,21 @@
         </div>
     </section>
 
+    <!-- 相似商品推荐 -->
+    <section id="similar-products">
+        <!-- 相似产品将在这里动态加载 -->
+    </section>
+
+    <!-- 个人推荐 -->
+    <section id="personal-recommendations" style="display:none;">
+        <!-- 个人推荐将在这里动态加载 -->
+    </section>
+
+    <!-- 热门推荐 -->
+    <section id="popular-recommendations">
+        <!-- 热门推荐将在这里动态加载 -->
+    </section>
+
     <!-- Related Products -->
     <section id="related-products">
         <h2>相关推荐</h2>
@@ -52,8 +67,49 @@
         <p>&copy; 2025 在线商店</p>
     </footer>
 
+    <!-- 修改这里：使用专用的productDetails.js替代product.js -->
+    <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/product.js"></script>
+    <script src="js/productDetails.js"></script>
+
+    <script>
+        // 记录产品查看开始时间
+        let productViewStartTime = Date.now();
+        let viewDurationLogged = false;
+
+        // 在页面关闭或跳转时记录停留时间
+        window.addEventListener('beforeunload', logViewDuration);
+        
+        // 每隔30秒记录一次停留时间（针对长时间浏览）
+        setInterval(logViewDuration, 30000);
+        
+        function logViewDuration() {
+            // 从window中获取产品ID
+            if (!window.productId || viewDurationLogged) return;
+            
+            const durationSeconds = Math.floor((Date.now() - productViewStartTime) / 1000);
+            if (durationSeconds < 5) return; // 忽略太短的停留
+            
+            // 记录停留时间
+            try {
+                // 如果已加载api.js，就使用其中的方法
+                if (typeof logProductViewDuration === 'function') {
+                    logProductViewDuration(window.productId, durationSeconds);
+                }
+            } catch (error) {
+                console.error('记录产品浏览时间失败:', error);
+            }
+            
+            // 重置计时
+            productViewStartTime = Date.now();
+            viewDurationLogged = true;
+            
+            // 5秒后允许再次记录（避免重复记录）
+            setTimeout(() => {
+                viewDurationLogged = false;
+            }, 5000);
+        }
+    </script>
 </body>
 
 </html>

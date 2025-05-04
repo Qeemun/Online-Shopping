@@ -14,9 +14,13 @@ module.exports = async (req, res, next) => {
             return res.status(401).json({ message: '无效的认证令牌' });
         }
 
+        // 确保JWT密钥存在
+        const jwtSecret = process.env.JWT_SECRET || 'mySuperSecretKey123!';
+        console.log('认证中的JWT密钥状态:', jwtSecret ? '已设置' : '未设置');
+
         let decoded;
         try {
-            decoded = jwt.verify(token, process.env.JWT_SECRET);
+            decoded = jwt.verify(token, jwtSecret);
             console.log('解码的token:', decoded); // 调试日志
         } catch (error) {
             console.error('Token验证失败:', error);

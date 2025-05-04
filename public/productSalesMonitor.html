@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品销售监控 - 销售管理</title>
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <h1>商品销售监控</h1>
+        <nav>
+            <a href="salesDashboard.html">返回管理面板</a>
+            <a href="index.html">首页</a>
+        </nav>
+    </header>
+
+    <!-- Sales Monitoring Section -->
+    <section id="sales-monitoring">
+        <h2>销售状态监控</h2>
+        
+        <!-- 筛选器 -->
+        <div class="filter-controls">
+            <div class="filter-item">
+                <label for="category-filter">按类别:</label>
+                <select id="category-filter" onchange="filterProducts()">
+                    <option value="">全部类别</option>
+                    <!-- 类别选项将动态加载 -->
+                </select>
+            </div>
+            <div class="filter-item">
+                <label for="status-filter">按状态:</label>
+                <select id="status-filter" onchange="filterProducts()">
+                    <option value="">全部状态</option>
+                    <option value="normal">库存正常</option>
+                    <option value="warning">库存不足</option>
+                    <option value="danger">紧急补货</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- 销售图表 -->
+        <div class="chart-container">
+            <canvas id="sales-chart"></canvas>
+        </div>
+        
+        <!-- 商品状态表格 -->
+        <div class="table-container">
+            <h3>商品销售状态</h3>
+            <table id="product-status-table">
+                <thead>
+                    <tr>
+                        <th>商品名称</th>
+                        <th>类别</th>
+                        <th>已售数量</th>
+                        <th>剩余库存</th>
+                        <th>库存状态</th>
+                        <th>最近销售</th>
+                    </tr>
+                </thead>
+                <tbody id="product-status-body">
+                    <!-- 商品状态信息将动态加载 -->
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2024 牧燕小站</p>
+    </footer>
+
+    <script src="js/productSalesMonitor.js"></script>
+</body>
+</html>

@@ -5,10 +5,10 @@ const Order = db.Order;
 
 exports.addToCart = async (req, res) => {
     try {
-        const { product_id, quantity } = req.body;
-        const user_id = req.user.id;
+        const { productId, quantity } = req.body;
+        const userId = req.user.id;
 
-        const product = await Product.findByPk(product_id);
+        const product = await Product.findByPk(productId);
         if (!product) {
             return res.status(404).json({ 
                 success: false,
@@ -24,10 +24,10 @@ exports.addToCart = async (req, res) => {
         }
 
         let cartItem = await CartItem.findOne({ 
-            where: { user_id, product_id },
+            where: { userId, productId },
             include: [{
                 model: Product,
-                as: 'Product',
+                as: 'product',
                 attributes: ['id', 'name', 'price', 'imageUrl', 'stock']
             }]
         });
@@ -44,15 +44,15 @@ exports.addToCart = async (req, res) => {
             await cartItem.save();
         } else {
             cartItem = await CartItem.create({ 
-                user_id, 
-                product_id, 
+                userId, 
+                productId, 
                 quantity
             });
             cartItem = await CartItem.findOne({
                 where: { id: cartItem.id },
                 include: [{
                     model: Product,
-                    as: 'Product',
+                    as: 'product',
                     attributes: ['id', 'name', 'price', 'imageUrl', 'stock']
                 }]
             });
@@ -79,14 +79,14 @@ exports.getCartItems = async (req, res) => {
             return res.status(401).json({ message: '用户未认证' });
         }
 
-        const user_id = req.user.id;
-        console.log('当前用户ID:', user_id); // 调试日志
+        const userId = req.user.id;
+        console.log('当前用户ID:', userId); // 调试日志
 
         const cartItems = await CartItem.findAll({ 
-            where: { user_id },
+            where: { userId },
             include: [{
                 model: Product,
-                as: 'Product', // 确保使用关联别名
+                as: 'product', // 确保使用关联别名
                 attributes: ['id', 'name', 'price', 'imageUrl', 'stock']
             }]
         });
@@ -103,13 +103,14 @@ exports.getCartItems = async (req, res) => {
 
 exports.updateCartItem = async (req, res) => {
     try {
-        const { product_id, quantity } = req.body;
-        const user_id = req.user.id;
+        const { productId, quantity } = req.body;
+        const userId = req.user.id;
 
         const cartItem = await CartItem.findOne({ 
-            where: { user_id, product_id },
+            where: { userId, productId },
             include: [{
                 model: Product,
+                as: 'product',
                 attributes: ['id', 'name', 'price', 'imageUrl', 'stock']
             }]
         });
@@ -118,7 +119,7 @@ exports.updateCartItem = async (req, res) => {
             return res.status(404).json({ message: '商品不存在于购物车中' });
         }
 
-        if (quantity > cartItem.Product.stock) {
+        if (quantity > cartItem.product.stock) {
             return res.status(400).json({ message: '库存不足' });
         }
 
@@ -138,11 +139,11 @@ exports.updateCartItem = async (req, res) => {
 
 exports.removeFromCart = async (req, res) => {
     try {
-        const { product_id } = req.body;
-        const user_id = req.user.id;
+        const { productId } = req.body;
+        const userId = req.user.id;
 
         const result = await CartItem.destroy({ 
-            where: { user_id, product_id } 
+            where: { userId, productId } 
         });
 
         if (result === 0) {

@@ -46,24 +46,24 @@ function loadCart() {
         data.cartItems.forEach(item => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td><img src="http://localhost:3000${item.Product.imageUrl}" alt="${item.Product.name}"></td>
-                <td>${item.Product.name}</td>
+                <td><img src="${item.product.imageUrl}" alt="${item.product.name}"></td>
+                <td>${item.product.name}</td>
                 <td>
                     <input type="number" 
                            class="quantity-input" 
                            value="${item.quantity}" 
                            min="1"
-                           max="${item.Product.stock}"
-                           onchange="updateQuantity(${item.Product.id}, this.value)">
+                           max="${item.product.stock}"
+                           onchange="updateQuantity(${item.product.id}, this.value)">
                 </td>
-                <td>¥${item.Product.price}</td>
-                <td>¥${(item.Product.price * item.quantity).toFixed(2)}</td>
+                <td>¥${item.product.price}</td>
+                <td>¥${(item.product.price * item.quantity).toFixed(2)}</td>
                 <td>
-                    <button onclick="removeFromCart(${item.Product.id})" class="btn btn-danger">删除</button>
+                    <button onclick="removeFromCart(${item.product.id})" class="btn btn-danger">删除</button>
                 </td>
             `;
             cartTableBody.appendChild(row);
-            totalPrice += item.Product.price * item.quantity;
+            totalPrice += item.product.price * item.quantity;
         });
 
         document.getElementById('total-price').textContent = `¥${totalPrice.toFixed(2)}`;
@@ -98,7 +98,7 @@ function updateQuantity(productId, quantity) {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ product_id: productId, quantity })
+        body: JSON.stringify({ productId: productId, quantity })
     })
     .then(response => {
         if (!response.ok) {
@@ -132,7 +132,7 @@ function removeFromCart(productId) {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ product_id: productId })
+        body: JSON.stringify({ productId: productId })
     })
     .then(response => {
         if (!response.ok) {

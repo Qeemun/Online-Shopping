@@ -1,8 +1,8 @@
-const db = require('../models');  // 修改导入方式
+const db = require('../models');
 const Order = db.Order;
 const Product = db.Product;
 const OrderItem = db.OrderItem;
-const CartItem = db.CartItem;    // 添加 CartItem 导入
+const CartItem = db.CartItem;
 const User = db.User;
 
 // 创建订单并结账
@@ -12,10 +12,10 @@ exports.createOrder = async (req, res) => {
     try {
         // 查找用户购物车中的所有商品
         const cartItems = await CartItem.findAll({ 
-            where: { user_id: userId },
+            where: { userId },
             include: [{
                 model: Product,
-                as: 'Product',
+                as: 'product',
                 attributes: ['id', 'name', 'price', 'stock']
             }]
         });
@@ -30,35 +30,34 @@ exports.createOrder = async (req, res) => {
         // 计算总金额
         let totalAmount = 0;
         for (let cartItem of cartItems) {
-            if (!cartItem.Product) {
+            if (!cartItem.product) {
                 return res.status(400).json({ 
                     success: false,
-                    message: `商品 ${cartItem.product_id} 不存在` 
+                    message: `商品 ${cartItem.productId} 不存在` 
                 });
             }
-            totalAmount += cartItem.Product.price * cartItem.quantity;
+            totalAmount += cartItem.product.price * cartItem.quantity;
         }
 
         // 创建订单
         const order = await Order.create({
-            user_id: userId,
-            total_amount: totalAmount,
-            status: '待支付',
-            order_date: new Date()
+            userId,
+            totalAmount,
+            status: 'pending'
         });
 
         // 添加订单项
         for (let cartItem of cartItems) {
             await OrderItem.create({
-                order_id: order.id,
-                product_id: cartItem.Product.id,
+                orderId: order.id,
+                productId: cartItem.product.id,
                 quantity: cartItem.quantity,
-                price: cartItem.Product.price
+                price: cartItem.product.price
             });
         }
 
         // 清空购物车
-        await CartItem.destroy({ where: { user_id: userId } });
+        await CartItem.destroy({ where: { userId } });
 
         // 返回订单ID
         res.json({
@@ -76,26 +75,24 @@ exports.createOrder = async (req, res) => {
     }
 };
 
-
 // 查看用户历史订单
 exports.getOrderHistory = async (req, res) => {
     try {
-        const userId = req.user.id; // 使用 req.user.id 而不是 req.userId
+        const userId = req.user.id;
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
 
-        // 修改查询，添加正确的关联别名
         const orders = await Order.findAll({
-            where: { user_id: userId },
-            order: [['order_date', 'DESC']],
+            where: { userId },
+            order: [['createdAt', 'DESC']],
             limit: limit,
             offset: (page - 1) * limit,
             include: [{
                 model: OrderItem,
-                as: 'orderItems', // 使用正确的别名
+                as: 'orderItems',
                 include: [{
                     model: Product,
-                    as: 'product', // 使用正确的别名
+                    as: 'product',
                     attributes: ['name', 'price']
                 }]
             }]
@@ -104,9 +101,9 @@ exports.getOrderHistory = async (req, res) => {
         // 格式化订单数据
         const formattedOrders = orders.map(order => ({
             id: order.id,
-            total_amount: Number(order.total_amount),
+            totalAmount: Number(order.totalAmount),
             status: order.status,
-            order_date: order.order_date,
+            createdAt: order.createdAt,
             items: order.orderItems ? order.orderItems.map(item => ({
                 id: item.id,
                 quantity: item.quantity,
@@ -179,9 +176,9 @@ exports.getOrderDetails = async (req, res) => {
         // 格式化订单数据
         const formattedOrder = {
             id: order.id,
-            total_amount: Number(order.total_amount),
+            totalAmount: Number(order.totalAmount),
             status: order.status,
-            order_date: order.order_date,
+            createdAt: order.createdAt,
             items: order.orderItems ? order.orderItems.map(item => ({
                 id: item.id,
                 quantity: item.quantity,
@@ -221,10 +218,10 @@ exports.getAllOrders = async (req, res) => {
             ]
         });
 
-        // 确保 total_amount 是数字类型
+        // 确保 totalAmount 是数字类型
         const formattedOrders = orders.map(order => ({
             ...order.toJSON(),
-            total_amount: Number(order.total_amount)
+            totalAmount: Number(order.totalAmount)
         }));
 
         res.status(200).json({ success: true, orders: formattedOrders });

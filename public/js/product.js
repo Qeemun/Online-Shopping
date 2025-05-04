@@ -225,7 +225,7 @@ function displayProductDetails(product) {
         </div>
         <div class="product-content">
             <h1>${product.name}</h1>
-            <p class="price">¥${product.price}</p>
+            <p class="price">¥${typeof product.price === 'number' ? product.price.toFixed(2) : product.price}</p>
             <p class="stock">库存: ${product.stock}</p>
             <p class="category">类别: ${product.category || '未分类'}</p>
             <div class="description">
@@ -259,14 +259,14 @@ function addToCart(productId) {
         }
     }
 
-    fetch('http://localhost:3000/cart/add', {
+    fetch('http://localhost:3000/cart', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-            product_id: productId,
+            productId: parseInt(productId),
             quantity: quantity
         })
     })
@@ -285,4 +285,267 @@ function addToCart(productId) {
         console.error('添加到购物车失败:', error);
         alert('添加失败，请重试');
     });
+}
+
+// 产品详情页面脚本
+document.addEventListener('DOMContentLoaded', async function () {
+    // 验证用户登录状态
+    checkLoginStatus();
+    
+    // 获取URL中的产品ID
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get('id');
+    
+    if (!id) {
+        document.getElementById('product-info').innerHTML = '<p>产品ID不存在</p>';
+        return;
+    }
+    
+    // 设置全局变量，用于记录停留时间
+    productId = id;
+    
+    try {
+        // 获取产品详情
+        const response = await api.fetch(api.product.details(id));
+        const product = response.product;
+        
+        // 显示产品详情
+        displayProductDetails(product);
+        
+        // 绑定加入购物车按钮事件
+        document.getElementById('add-to-cart').addEventListener('click', () => addToCart(product.id));
+        
+        // 加载相似商品推荐
+        const similarProducts = await loadSimilarProducts(id);
+        if (similarProducts && similarProducts.length > 0) {
+            const similarProductsHtml = createRecommendationSection('相似商品推荐', similarProducts);
+            document.getElementById('similar-products').innerHTML = similarProductsHtml;
+            
+            // 绑定相似商品的加入购物车按钮事件
+            document.querySelectorAll('#similar-products .add-to-cart-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const productId = e.target.dataset.id;
+                    addToCart(productId);
+                });
+            });
+        }
+        
+        // 如果用户已登录，加载个性化推荐
+        if (localStorage.getItem('token')) {
+            const userRecommendations = await loadUserRecommendations();
+            if (userRecommendations && userRecommendations.length > 0) {
+                // 过滤掉当前产品
+                const filteredRecommendations = userRecommendations.filter(rec => 
+                    rec.product && rec.product.id !== parseInt(id)
+                ).map(rec => rec.product);
+                
+                if (filteredRecommendations.length > 0) {
+                    const userRecsHtml = createRecommendationSection('为您推荐', filteredRecommendations);
+                    document.getElementById('personal-recommendations').innerHTML = userRecsHtml;
+                    document.getElementById('personal-recommendations').style.display = 'block';
+                    
+                    // 绑定个性化推荐的加入购物车按钮事件
+                    document.querySelectorAll('#personal-recommendations .add-to-cart-btn').forEach(button => {
+                        button.addEventListener('click', (e) => {
+                            const productId = e.target.dataset.id;
+                            addToCart(productId);
+                        });
+                    });
+                }
+            }
+        }
+        
+        // 加载热门商品推荐
+        const popularProducts = await loadPopularProducts();
+        if (popularProducts && popularProducts.length > 0) {
+            // 过滤掉当前产品和已经在相似推荐中出现的产品
+            const shownProductIds = new Set([parseInt(id)]);
+            document.querySelectorAll('#similar-products .product-card').forEach(card => {
+                const link = card.querySelector('a');
+                const productId = new URLSearchParams(link.href.split('?')[1]).get('id');
+                shownProductIds.add(parseInt(productId));
+            });
+            
+            const filteredPopular = popularProducts.filter(product => 
+                !shownProductIds.has(product.id)
+            );
+            
+            if (filteredPopular.length > 0) {
+                const popularRecsHtml = createRecommendationSection('热门商品', filteredPopular);
+                document.getElementById('popular-recommendations').innerHTML = popularRecsHtml;
+                
+                // 绑定热门推荐的加入购物车按钮事件
+                document.querySelectorAll('#popular-recommendations .add-to-cart-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const productId = e.target.dataset.id;
+                        addToCart(productId);
+                    });
+                });
+            }
+        }
+        
+    } catch (error) {
+        console.error('获取产品详情失败:', error);
+        document.getElementById('product-info').innerHTML = '<p>获取产品详情失败</p>';
+    }
+});
+
+// 显示产品详情
+function displayProductDetails(product) {
+    const productInfoHtml = `
+        <div class="product-image">
+            <img src="${product.imageUrl || '/images/default-product.png'}" alt="${product.name}">
+        </div>
+        <div class="product-content">
+            <h1>${product.name}</h1>
+            <p class="price">¥${typeof product.price === 'number' ? product.price.toFixed(2) : product.price}</p>
+            <p class="stock">库存: ${product.stock}</p>
+            <div class="description">
+                <h3>商品描述:</h3>
+                <p>${product.description || '暂无描述'}</p>
+            </div>
+            <div class="category">
+                <p>分类: ${product.category || '未分类'}</p>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('product-info').innerHTML = productInfoHtml;
+}
+
+// 加入购物车
+async function addToCart(productId) {
+    // 检查用户是否登录
+    if (!localStorage.getItem('token')) {
+        alert('请先登录');
+        window.location.href = 'login.html';
+        return;
+    }
+    
+    try {
+        const response = await api.fetch(api.cart.add, {
+            method: 'POST',
+            body: JSON.stringify({
+                productId: parseInt(productId),
+                quantity: 1
+            })
+        });
+        
+        alert(response.message || '加入购物车成功');
+    } catch (error) {
+        console.error('加入购物车失败:', error);
+        alert('加入购物车失败: ' + error.message);
+    }
+}
+
+// 检查用户登录状态
+function checkLoginStatus() {
+    const user = localStorage.getItem('user');
+    const token = localStorage.getItem('token');
+    
+    const loginLink = document.getElementById('login-link');
+    const registerLink = document.getElementById('register-link');
+    const cartLink = document.getElementById('cart-link');
+    const adminLink = document.getElementById('admin-link');
+    const usernameDiv = document.getElementById('username');
+    const logoutButton = document.getElementById('logout-button');
+
+    if (!loginLink || !registerLink || !usernameDiv) {
+        // 如果元素不存在，直接返回
+        return;
+    }
+
+    if (user && token) {
+        // 已登录状态
+        const userData = JSON.parse(user);
+        if (loginLink) loginLink.style.display = 'none';
+        if (registerLink) registerLink.style.display = 'none';
+        if (cartLink) cartLink.style.display = 'inline';
+        if (logoutButton) logoutButton.style.display = 'inline';
+        if (usernameDiv) usernameDiv.textContent = `欢迎, ${userData.username}`;
+        
+        // 如果是销售人员，显示产品管理链接
+        if (userData.role === 'sales' && adminLink) {
+            adminLink.style.display = 'inline';
+        }
+    } else {
+        // 未登录状态
+        if (loginLink) loginLink.style.display = 'inline';
+        if (registerLink) registerLink.style.display = 'inline';
+        if (cartLink) cartLink.style.display = 'none';
+        if (adminLink) adminLink.style.display = 'none';
+        if (logoutButton) logoutButton.style.display = 'none';
+        if (usernameDiv) usernameDiv.textContent = '';
+    }
+}
+
+// 加载相似产品推荐
+async function loadSimilarProducts(productId) {
+    try {
+        const response = await fetch(`http://localhost:3000/recommendations/similar/${productId}`);
+        const data = await response.json();
+        return data.success ? data.products : [];
+    } catch (error) {
+        console.error('加载相似产品推荐失败:', error);
+        return [];
+    }
+}
+
+// 加载用户个性化推荐
+async function loadUserRecommendations() {
+    if (!localStorage.getItem('token')) return [];
+    
+    try {
+        const response = await fetch('http://localhost:3000/recommendations/mine', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        const data = await response.json();
+        return data.success ? data.recommendations : [];
+    } catch (error) {
+        console.error('加载个性化推荐失败:', error);
+        return [];
+    }
+}
+
+// 加载热门产品
+async function loadPopularProducts() {
+    try {
+        const response = await fetch('http://localhost:3000/recommendations/popular');
+        const data = await response.json();
+        return data.success ? data.products : [];
+    } catch (error) {
+        console.error('加载热门产品失败:', error);
+        return [];
+    }
+}
+
+// 创建推荐区块HTML
+function createRecommendationSection(title, products) {
+    if (!products || products.length === 0) return '';
+    
+    const productsHtml = products.map(product => {
+        const imageUrl = product.imageUrl || '/images/default-product.png';
+        return `
+            <div class="product-card">
+                <img src="${imageUrl}" alt="${product.name}" onerror="this.src='/images/default-product.png'">
+                <h3>${product.name}</h3>
+                <p class="price">¥${typeof product.price === 'number' ? product.price.toFixed(2) : product.price}</p>
+                <div class="product-actions">
+                    <a href="productDetails.html?id=${product.id}" class="view-btn">查看详情</a>
+                    <button class="add-to-cart-btn" data-id="${product.id}">加购</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    return `
+        <div class="recommendation-section">
+            <h2>${title}</h2>
+            <div class="product-grid">
+                ${productsHtml}
+            </div>
+        </div>
+    `;
 }
