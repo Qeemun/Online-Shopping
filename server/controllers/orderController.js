@@ -179,6 +179,10 @@ exports.getOrderDetails = async (req, res) => {
             totalAmount: Number(order.totalAmount),
             status: order.status,
             createdAt: order.createdAt,
+            // 添加收货人信息
+            recipientName: order.recipientName,
+            recipientPhone: order.recipientPhone,
+            shippingAddress: order.shippingAddress,
             items: order.orderItems ? order.orderItems.map(item => ({
                 id: item.id,
                 quantity: item.quantity,

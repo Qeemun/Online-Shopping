@@ -27,13 +27,14 @@ function loadOrders() {
                 row.innerHTML = `
                     <td>${order.id}</td>
                     <td>${order.user.username}</td>
-                    <td>¥<input type="number" value="${Number(order.total_amount).toFixed(2)}" onchange="updateOrderInfo(${order.id}, 'total_amount', this.value)"></td>
+                    <td>¥<input type="number" value="${Number(order.totalAmount).toFixed(2)}" onchange="updateOrderInfo(${order.id}, 'totalAmount', this.value)"></td>
                     <td>
                         <select onchange="updateOrderStatus(${order.id}, this.value)">
-                            <option value="待支付" ${order.status === '待支付' ? 'selected' : ''}>待支付</option>
-                            <option value="已支付" ${order.status === '已支付' ? 'selected' : ''}>已支付</option>
-                            <option value="已发货" ${order.status === '已发货' ? 'selected' : ''}>已发货</option>
-                            <option value="已完成" ${order.status === '已完成' ? 'selected' : ''}>已完成</option>
+                            <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>待支付</option>
+                            <option value="paid" ${order.status === 'paid' ? 'selected' : ''}>已支付</option>
+                            <option value="shipped" ${order.status === 'shipped' ? 'selected' : ''}>已发货</option>
+                            <option value="completed" ${order.status === 'completed' ? 'selected' : ''}>已完成</option>
+                            <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>已取消</option>
                         </select>
                     </td>
                     <td>

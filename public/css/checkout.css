@@ -470,3 +470,314 @@
     flex-direction: column;
   }
 }
+
+/* 重置结账页面样式 */
+#checkout-section {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem;
+  background-color: #f8fafc;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+#checkout-section h2 {
+  text-align: center;
+  font-size: 1.8rem;
+  margin-bottom: 1.8rem;
+  color: #1e293b;
+  font-weight: 700;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 0.8rem;
+}
+
+/* 订单摘要部分样式 */
+#order-summary {
+  background-color: #ffffff;
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  margin-bottom: 1.8rem;
+  transition: all 0.3s ease;
+}
+
+#order-summary:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+#order-summary h3 {
+  color: #334155;
+  font-size: 1.4rem;
+  margin-bottom: 1.2rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+#order-summary table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#order-summary table th {
+  background-color: #f1f5f9;
+  color: #475569;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  border-radius: 5px 5px 0 0;
+}
+
+#order-summary table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  color: #475569;
+}
+
+#order-summary table tr:last-child td {
+  border-bottom: none;
+}
+
+#order-summary table tr:hover td {
+  background-color: #f8fafc;
+}
+
+#order-summary p {
+  text-align: right;
+  font-weight: 600;
+  margin: 0.8rem 0;
+  color: #475569;
+}
+
+#shipping-fee, #total-price {
+  color: #e11d48;
+  font-weight: 700;
+  margin-left: 0.5rem;
+}
+
+/* 支付信息部分样式 */
+#payment-info {
+  background-color: #ffffff;
+  padding: 1.8rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+}
+
+#payment-info:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+#payment-info h3 {
+  color: #334155;
+  font-size: 1.4rem;
+  margin: 0 0 1.2rem 0;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+/* 地址选择器样式 */
+#address-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.8rem;
+}
+
+.address-selectors {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+#province, #city, #district {
+  flex: 1;
+  min-width: 120px;
+  padding: 0.8rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background-color: #f8fafc;
+  color: #334155;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.8rem center;
+  padding-right: 2.5rem;
+}
+
+#province:focus, #city:focus, #district:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  outline: none;
+}
+
+#province:hover, #city:hover, #district:hover {
+  border-color: #94a3b8;
+}
+
+#detail-address, #contact-name, #contact-phone {
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background-color: #f8fafc;
+  color: #334155;
+  transition: all 0.3s ease;
+}
+
+#detail-address:focus, #contact-name:focus, #contact-phone:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  outline: none;
+}
+
+#detail-address:hover, #contact-name:hover, #contact-phone:hover {
+  border-color: #94a3b8;
+}
+
+/* 备注信息样式 */
+#note {
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background-color: #f8fafc;
+  color: #334155;
+  transition: all 0.3s ease;
+  resize: vertical;
+  min-height: 100px;
+}
+
+#note:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  outline: none;
+}
+
+#note:hover {
+  border-color: #94a3b8;
+}
+
+/* 支付按钮样式 */
+#pay-button {
+  display: block;
+  width: 100%;
+  padding: 1rem;
+  margin: 1.5rem 0;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+#pay-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 14px rgba(29, 78, 216, 0.25);
+}
+
+#pay-button:active {
+  transform: translateY(0);
+  box-shadow: 0 3px 8px rgba(29, 78, 216, 0.2);
+}
+
+/* 支付状态样式 */
+#payment-status {
+  text-align: center;
+  padding: 0.75rem;
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+}
+
+/* 响应式布局 */
+@media (max-width: 768px) {
+  #checkout-section {
+    padding: 1.5rem;
+    border-radius: 8px;
+  }
+  
+  .address-selectors {
+    flex-direction: column;
+  }
+  
+  #province, #city, #district {
+    width: 100%;
+  }
+  
+  #order-summary table th {
+    font-size: 0.9rem;
+    padding: 0.6rem;
+  }
+  
+  #order-summary table td {
+    font-size: 0.9rem;
+    padding: 0.6rem;
+  }
+}
+
+/* 增强用户交互体验 */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+#order-summary, #payment-info {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #94a3b8;
+  transition: opacity 0.3s;
+}
+
+input:focus::placeholder, textarea:focus::placeholder {
+  opacity: 0.5;
+}
+
+/* 美化滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* 增强错误状态显示 */
+.error {
+  border-color: #e11d48 !important;
+  box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.1) !important;
+}
+
+.error-message {
+  color: #e11d48;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+  display: block;
+}

@@ -143,21 +143,6 @@ body {
   animation: ripple 1s ease-out;
 }
 
-@keyframes ripple {
-  0% {
-    transform: scale(0, 0);
-    opacity: 0.5;
-  }
-  20% {
-    transform: scale(25, 25);
-    opacity: 0.3;
-  }
-  100% {
-    transform: scale(40, 40);
-    opacity: 0;
-  }
-}
-
 /* 额外链接 */
 .extra-links {
   display: flex;
@@ -204,39 +189,6 @@ body {
 
 .or-divider::after {
   margin-left: var(--spacing-sm);
-}
-
-/* 错误消息样式 */
-.error-message {
-  background-color: rgba(255, 56, 96, 0.1);
-  border-left: 3px solid var(--error-color);
-  color: var(--error-color);
-  padding: var(--spacing-sm);
-  border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-sm);
-  margin-top: var(--spacing-md);
-  position: relative;
-  z-index: 1;
-}
-
-/* 加载指示器 */
-.loading-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: var(--spacing-md);
-  position: relative;
-  z-index: 1;
-}
-
-.spinner {
-  border: 3px solid var(--gray-200);
-  border-top: 3px solid var(--primary-color);
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  animation: spin 1s linear infinite;
-  margin-right: var(--spacing-sm);
 }
 
 /* 响应式调整 */

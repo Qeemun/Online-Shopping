@@ -36,7 +36,7 @@ const upload = multer({
 // 导出 multer 配置
 exports.upload = upload;
 
-// 修改getAllProducts函数以支持类别筛选
+// 修改getAllProducts函数以支持类别筛选和分页
 
 exports.getAllProducts = async (req, res) => {
     try {
@@ -56,13 +56,21 @@ exports.getAllProducts = async (req, res) => {
         if (req.query.category) {
             whereCondition.category = req.query.category;
         }
+
+        // 分页参数
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 12;
+        const offset = (page - 1) * limit;
         
-        // 使用条件查询产品
+        // 查询总数
+        const total = await Product.count({ where: whereCondition });
+        
+        // 使用条件查询产品（带分页）
         const products = await Product.findAll({ 
             where: whereCondition,
-            order: [
-                ['createdAt', 'DESC']
-            ]
+            order: [['createdAt', 'DESC']],
+            limit: limit,
+            offset: offset
         });
         
         // 格式化产品数据
@@ -79,7 +87,14 @@ exports.getAllProducts = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            products: formattedProducts
+            products: formattedProducts,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+                hasMore: page < Math.ceil(total / limit)
+            }
         });
     } catch (error) {
         console.error('获取产品列表失败:', error);

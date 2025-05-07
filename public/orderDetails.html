@@ -28,6 +28,19 @@
             <p><strong>订单编号:</strong> <span id="order-id">加载中...</span></p>
             <p><strong>总金额:</strong> <span id="total-price">加载中...</span> 元</p>
             <p><strong>订单状态:</strong> <span id="order-status">加载中...</span></p>
+            
+            <!-- 收货信息 -->
+            <div id="shipping-info">
+                <h3>收货信息</h3>
+                <p><strong>收件人:</strong> <span id="recipient-name">加载中...</span></p>
+                <p><strong>联系电话:</strong> <span id="recipient-phone">加载中...</span></p>
+                <p><strong>收货地址:</strong> <span id="shipping-address">加载中...</span></p>
+            </div>
+            
+            <!-- 添加支付按钮（仅待支付状态显示） -->
+            <div id="payment-action" style="display: none; margin-top: 20px;">
+                <button id="continue-payment-btn" class="btn btn-primary">继续支付</button>
+            </div>
         </div>
 
         <!-- Products List -->
@@ -45,9 +58,6 @@
                 <!-- 商品信息将动态加载 -->
             </tbody>
         </table>
-
-        <!-- Button to track order (if available) -->
-        <button id="track-order-button" onclick="trackOrder()">跟踪订单</button>
     </section>
 
     <!-- Footer -->

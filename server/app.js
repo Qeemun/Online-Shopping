@@ -1,6 +1,6 @@
-require('dotenv').config();
+const path = require('path');  // 首先导入path模块
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
-const path = require('path');
 const app = express();
 const cors = require('cors');
 const userRoutes = require('./routes/userRoutes');

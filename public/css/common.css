@@ -93,7 +93,8 @@ header nav a:hover {
   color: var(--primary-color);
 }
 
-#username {
+/* 修改选择器，确保只应用于导航栏中的用户名显示，而非表单输入框 */
+nav #username, header #username, .user-info #username {
   font-weight: var(--font-weight-medium);
   color: var(--primary-color);
   margin-left: var(--spacing-md);

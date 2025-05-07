@@ -31,8 +31,35 @@ function loadOrderDetails(orderId) {
         const order = data.order;
         document.getElementById('order-id').textContent = order.id;
         document.getElementById('total-price').textContent = 
-            `¥${order.total_amount.toFixed(2)}`;
-        document.getElementById('order-status').textContent = order.status;
+            `¥${order.totalAmount.toFixed(2)}`;
+        
+        // 转换订单状态为中文
+        const statusMap = {
+            'pending': '待支付',
+            'paid': '已支付',
+            'shipped': '已发货',
+            'completed': '已完成',
+            'cancelled': '已取消'
+        };
+        document.getElementById('order-status').textContent = statusMap[order.status] || order.status;
+
+        // 显示收货信息
+        document.getElementById('recipient-name').textContent = order.recipientName || '未提供';
+        document.getElementById('recipient-phone').textContent = order.recipientPhone || '未提供';
+        document.getElementById('shipping-address').textContent = order.shippingAddress || '未提供';
+
+        // 检查是否为待支付状态，如果是则显示支付按钮
+        if (order.status === 'pending') {
+            document.getElementById('payment-action').style.display = 'block';
+            document.getElementById('continue-payment-btn').addEventListener('click', () => {
+                // 保存订单ID到本地存储，以便结账页面使用
+                localStorage.setItem('currentOrderId', order.id);
+                // 跳转到结账页面
+                window.location.href = `checkout.html?orderId=${order.id}`;
+            });
+        } else {
+            document.getElementById('payment-action').style.display = 'none';
+        }
 
         const orderItemsBody = document.getElementById('order-items-body');
         orderItemsBody.innerHTML = '';
@@ -55,11 +82,6 @@ function loadOrderDetails(orderId) {
         document.getElementById('order-info').innerHTML = 
             '<p class="error-message">加载订单详情失败，请重试</p>';
     });
-}
-
-// 订单跟踪
-function trackOrder() {
-    alert('此功能暂时不可用。');  // 实际应用中可以链接到订单追踪服务或展示更详细信息
 }
 
 // 获取URL中的订单ID并加载数据

@@ -31,13 +31,22 @@ function loadOrderHistory() {
             return;
         }
 
+        // 订单状态转换为中文的映射
+        const statusMap = {
+            'pending': '待支付',
+            'paid': '已支付',
+            'shipped': '已发货',
+            'completed': '已完成',
+            'cancelled': '已取消'
+        };
+
         orderHistoryBody.innerHTML = '';
         data.orders.forEach(order => {
             const orderRow = `
                 <tr>
                     <td>${order.id}</td>
-                    <td>¥${order.total_amount.toFixed(2)}</td>
-                    <td>${order.status}</td>
+                    <td>¥${order.totalAmount.toFixed(2)}</td>
+                    <td>${statusMap[order.status] || order.status}</td>
                     <td>
                         <button onclick="viewOrderDetails(${order.id})" class="btn btn-primary">
                             查看详情

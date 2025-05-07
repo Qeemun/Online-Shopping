@@ -8,6 +8,12 @@ const nodemailer = require('nodemailer');
 // 发送电子邮件确认发货
 const sendOrderConfirmationEmail = async (email, order) => {
     try {
+        // 检查是否配置了邮件凭证
+        if (!process.env.EMAIL_USER || !process.env.EMAIL_APP_PASSWORD) {
+            console.log('邮件发送凭证未配置，跳过邮件发送');
+            return false;
+        }
+
         // 使用 QQ 邮箱 SMTP
         const transporter = nodemailer.createTransport({
             host: 'smtp.qq.com',
@@ -22,17 +28,61 @@ const sendOrderConfirmationEmail = async (email, order) => {
             socketTimeout: 10000
         });
 
+        // 生成商品列表HTML
+        let productsHTML = `
+            <table style="width:100%; border-collapse: collapse; margin-top: 20px; margin-bottom: 20px;">
+                <tr style="background-color: #f8f8f8;">
+                    <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">商品名称</th>
+                    <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">数量</th>
+                    <th style="padding: 10px; text-align: right; border: 1px solid #ddd;">单价</th>
+                    <th style="padding: 10px; text-align: right; border: 1px solid #ddd;">总价</th>
+                </tr>
+        `;
+
+        // 添加每个商品的信息
+        for (const item of order.orderItems) {
+            // 确保 price 是数字类型
+            const price = parseFloat(item.price);
+            const quantity = parseInt(item.quantity);
+            const totalPrice = price * quantity;
+            
+            productsHTML += `
+                <tr>
+                    <td style="padding: 10px; text-align: left; border: 1px solid #ddd;">${item.product.name}</td>
+                    <td style="padding: 10px; text-align: center; border: 1px solid #ddd;">${quantity}</td>
+                    <td style="padding: 10px; text-align: right; border: 1px solid #ddd;">¥${price.toFixed(2)}</td>
+                    <td style="padding: 10px; text-align: right; border: 1px solid #ddd;">¥${totalPrice.toFixed(2)}</td>
+                </tr>
+            `;
+        }
+
+        productsHTML += '</table>';
+
         const mailOptions = {
             from: `"在线商店" <${process.env.EMAIL_USER}>`,
             to: email,
             subject: '订单确认 - 已支付',
             html: `
-                <h2>订单支付成功通知</h2>
-                <p>尊敬的用户：</p>
-                <p>您的订单 #${order.id} 已成功支付。</p>
-                <p>订单金额：¥${order.total_amount}</p>
-                <p>支付时间：${new Date().toLocaleString()}</p>
-                <p>感谢您的购买！</p>
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
+                    <h2 style="color: #333; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">订单支付成功通知</h2>
+                    
+                    <div style="margin: 20px 0;">
+                        <h3 style="color: #333; margin-bottom: 15px;">订单信息</h3>
+                        <p><strong>订单编号:</strong> #${order.id}</p>
+                        <p><strong>总金额:</strong> ¥${parseFloat(order.totalAmount).toFixed(2)} 元</p>
+                        <p><strong>订单状态:</strong> 已支付</p>
+                        <p><strong>支付时间:</strong> ${new Date().toLocaleString()}</p>
+                    </div>
+                    
+                    <div>
+                        <h3 style="color: #333; margin-bottom: 15px;">商品列表</h3>
+                        ${productsHTML}
+                    </div>
+                    
+                    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #777; font-size: 14px;">
+                        <p>感谢您的购买！如有任何问题，请随时与我们联系。</p>
+                    </div>
+                </div>
             `
         };
 
@@ -50,10 +100,17 @@ const sendOrderConfirmationEmail = async (email, order) => {
 
 // 支付处理函数，添加邮件发送错误处理
 exports.processPayment = async (req, res) => {
-    const { orderId } = req.body;
+    const { orderId, address, contactName, contactPhone, note } = req.body;
+
+    if (!orderId) {
+        return res.status(400).json({
+            success: false,
+            message: '订单ID不能为空'
+        });
+    }
 
     try {
-        // 获取订单和相关信息
+        // 获取订单和相关信息，确保包含了完整的商品数据
         const order = await Order.findOne({
             where: { id: orderId },
             include: [{
@@ -62,7 +119,7 @@ exports.processPayment = async (req, res) => {
                 include: [{
                     model: Product,
                     as: 'product',
-                    attributes: ['id', 'stock']
+                    attributes: ['id', 'name', 'price', 'stock'] // 确保包含商品名称
                 }]
             },
             {
@@ -96,15 +153,25 @@ exports.processPayment = async (req, res) => {
             await product.save();
         }
 
-        // 更新订单状态为已支付
-        order.status = '已支付';
+        // 更新订单状态为已支付以及收货信息（使用驼峰命名法）
+        order.status = 'paid';
+        if (address) order.shippingAddress = address;
+        if (contactName) order.recipientName = contactName;
+        if (contactPhone) order.recipientPhone = contactPhone;
+        if (note) order.note = note;
+        
         await order.save();
 
-        // 尝试发送支付确认邮件
+        // 尝试发送支付确认邮件，但不影响支付流程
+        let emailSent = false;
         if (order.user && order.user.email) {
             try {
-                await sendOrderConfirmationEmail(order.user.email, order);
-                console.log(`支付确认邮件已发送至 ${order.user.email}`);
+                emailSent = await sendOrderConfirmationEmail(order.user.email, order);
+                if (emailSent) {
+                    console.log(`支付确认邮件已发送至 ${order.user.email}`);
+                } else {
+                    console.log(`邮件发送跳过或失败，但支付流程已完成`);
+                }
             } catch (emailError) {
                 console.error('邮件发送失败，但支付流程已完成:', emailError);
             }
@@ -114,7 +181,8 @@ exports.processPayment = async (req, res) => {
 
         res.status(200).json({ 
             success: true,
-            message: '支付成功，订单已确认并扣减库存'
+            message: '支付成功，订单已确认并扣减库存',
+            emailSent: emailSent
         });
 
     } catch (error) {

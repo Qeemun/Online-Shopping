@@ -46,13 +46,28 @@
             <p>总金额: <span id="total-price"></span> 元</p>
         </div>
 
-        <!-- 收货地址和支付信息 -->
+        <!-- 收货地址和备注信息 -->
         <div id="payment-info">
             <h3>收货地址</h3>
-            <input type="text" id="address" placeholder="请输入收货地址" required><br>
+            <div id="address-container">
+                <div class="address-selectors">
+                    <select id="province" required>
+                        <option value="">请选择省份</option>
+                    </select>
+                    <select id="city" required>
+                        <option value="">请选择城市</option>
+                    </select>
+                    <select id="district" required>
+                        <option value="">请选择区县</option>
+                    </select>
+                </div>
+                <input type="text" id="detail-address" placeholder="请输入详细地址（街道、小区、门牌号等）" required>
+                <input type="text" id="contact-name" placeholder="收货人姓名" required>
+                <input type="text" id="contact-phone" placeholder="联系电话" required>
+            </div>
 
-            <h3>支付信息</h3>
-            <input type="text" id="payment" placeholder="请输入支付信息" required><br>
+            <h3>备注信息</h3>
+            <textarea id="note" placeholder="如有特殊要求，请在此处填写备注信息" rows="3"></textarea>
 
             <button id="pay-button">立即支付</button>
             <p id="payment-status">支付状态: 等待支付</p>  <!-- 显示支付状态 -->
@@ -64,6 +79,7 @@
         <p>&copy; 2024 在线商店. 版权所有</p>
     </footer>
 
+    <script src="js/area-data.js"></script>
     <script src="js/checkout.js"></script>
 </body>
 

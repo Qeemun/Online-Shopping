@@ -66,11 +66,20 @@ body {
   z-index: 1;
 }
 
+/* 修复注册表单，确保输入框对齐 */
+form {
+  width: 100%;
+  margin: 0 auto;
+}
+
 /* 注册表单组件 */
 .input-group {
   position: relative;
   margin-bottom: var(--spacing-lg);
   z-index: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .input-group label {
@@ -79,6 +88,8 @@ body {
   font-weight: var(--font-weight-medium);
   color: var(--gray-700);
   font-size: var(--font-size-sm);
+  width: 100%;
+  text-align: left;
 }
 
 .input-group input {
@@ -89,6 +100,18 @@ body {
   font-size: var(--font-size-md);
   transition: all var(--transition-fast);
   background-color: var(--white);
+  box-sizing: border-box;
+  margin: 0; /* 确保没有任何margin */
+}
+
+/* 覆盖可能存在的全局样式 */
+.input-group input[type="text"],
+.input-group input[type="email"],
+.input-group input[type="password"] {
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: var(--spacing-md);
+  padding-right: var(--spacing-md);
 }
 
 .input-group input:focus {
@@ -115,15 +138,6 @@ body {
   z-index: 1;
 }
 
-.submit-btn:hover {
-  box-shadow: 0 6px 15px rgba(255, 143, 60, 0.25);
-  transform: translateY(-2px);
-}
-
-.submit-btn:active {
-  transform: translateY(0);
-}
-
 /* 波纹效果 */
 .submit-btn::after {
   content: '';
@@ -141,6 +155,15 @@ body {
 
 .submit-btn:focus:not(:active)::after {
   animation: ripple 1s ease-out;
+}
+
+.submit-btn:hover {
+  box-shadow: 0 6px 15px rgba(255, 143, 60, 0.25);
+  transform: translateY(-2px);
+}
+
+.submit-btn:active {
+  transform: translateY(0);
 }
 
 @keyframes ripple {

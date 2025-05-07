@@ -34,6 +34,22 @@ module.exports = (sequelize) => {
       allowNull: false,
       defaultValue: 'pending'
     },
+    shippingAddress: {
+      type: DataTypes.STRING(500),
+      allowNull: true
+    },
+    recipientName: {
+      type: DataTypes.STRING(100),
+      allowNull: true
+    },
+    recipientPhone: {
+      type: DataTypes.STRING(20),
+      allowNull: true
+    },
+    note: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
     createdAt: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW

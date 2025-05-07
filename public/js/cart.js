@@ -46,9 +46,9 @@ function loadCart() {
         data.cartItems.forEach(item => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td><img src="${item.product.imageUrl}" alt="${item.product.name}"></td>
-                <td>${item.product.name}</td>
-                <td>
+                <td data-label="商品图片"><img src="${item.product.imageUrl}" alt="${item.product.name}"></td>
+                <td data-label="商品名称">${item.product.name}</td>
+                <td data-label="数量">
                     <input type="number" 
                            class="quantity-input" 
                            value="${item.quantity}" 
@@ -56,9 +56,9 @@ function loadCart() {
                            max="${item.product.stock}"
                            onchange="updateQuantity(${item.product.id}, this.value)">
                 </td>
-                <td>¥${item.product.price}</td>
-                <td>¥${(item.product.price * item.quantity).toFixed(2)}</td>
-                <td>
+                <td data-label="单价">¥${item.product.price}</td>
+                <td data-label="总价">¥${(item.product.price * item.quantity).toFixed(2)}</td>
+                <td data-label="操作">
                     <button onclick="removeFromCart(${item.product.id})" class="btn btn-danger">删除</button>
                 </td>
             `;

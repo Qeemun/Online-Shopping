@@ -1,0 +1,74 @@
+/* header-fix.css - 优化导航栏可见度，移除冗余代码和过度使用的!important */
+
+/* 导航栏整体布局优化 */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  position: relative;
+}
+
+/* 增强站点名称可见度 */
+header h1 {
+  color: #ffffff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  font-weight: 700;
+  margin: 0 20px 0 0;
+}
+
+/* 统一导航元素布局 */
+header nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 10px;
+}
+
+/* 导航链接样式统一 */
+header nav a {
+  color: #ffffff;
+  font-weight: 600;
+  background-color: rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  padding: 6px 14px;
+  margin: 0 5px;
+  transition: all 0.3s ease;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+header nav a:hover {
+  background-color: rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+}
+
+/* 用户名显示可见度增强 */
+header #username {
+  color: #FFFFFF;
+  font-weight: 700;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  margin: 0 10px;
+  padding: 6px 10px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* 注销按钮样式增强 */
+#logout-button {
+  background-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 4px;
+  padding: 6px 14px;
+  margin: 0 0 0 5px;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+#logout-button:hover {
+  background-color: rgba(220, 53, 69, 0.8);
+  border-color: rgba(255, 255, 255, 0.7);
+}
