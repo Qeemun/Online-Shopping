@@ -1,0 +1,100 @@
+/* order-common.css - 订单相关页面共享样式 */
+
+/* 表格样式 */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    border-radius: var(--border-radius-sm);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+th, td {
+    padding: 10px;
+    text-align: left;
+    border: 1px solid #ddd;
+}
+
+th {
+    background-color: #f4f4f4;
+}
+
+/* 订单表格特殊样式 */
+.order-table {
+    width: 100%;
+    background: var(--white);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+}
+
+.order-table thead {
+    background: var(--primary-color);
+    color: var(--white);
+}
+
+.order-table th,
+.order-table td {
+    padding: var(--spacing-md);
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.order-table tbody tr:hover {
+    background-color: var(--primary-light);
+    transition: background-color var(--transition-speed);
+}
+
+/* 按钮样式 */
+.order-btn {
+    background-color: #007bff;
+    color: white;
+    padding: 12px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all var(--transition-speed);
+}
+
+.order-btn:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+}
+
+/* 订单状态样式 */
+.order-status {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius-sm);
+    font-weight: 500;
+    display: inline-block;
+}
+
+.status-pending {
+    background-color: var(--warning-color-light);
+    color: var(--warning-color);
+}
+
+.status-paid {
+    background-color: var(--success-color-light);
+    color: var(--success-color);
+}
+
+.status-shipped {
+    background-color: var(--info-color-light);
+    color: var(--info-color);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .order-table {
+        display: block;
+        overflow-x: auto;
+    }
+    
+    .order-table th,
+    .order-table td {
+        min-width: 120px;
+    }
+}

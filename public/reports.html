@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>销售报表中心 - 管理面板</title>
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/unified-dashboard.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/reports.css">
+    <!-- 引入Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <h1>销售报表中心</h1>
+        <nav>
+            <a href="dashboard.html">返回管理面板</a>
+            <a href="index.html">首页</a>
+        </nav>
+    </header>
+
+    <main>
+        <!-- 主选项卡 -->
+        <div class="main-tabs">
+            <div class="main-tab active" id="product-report-tab" onclick="switchMainTab('product-report')">商品销售报表</div>
+            <div class="main-tab" id="sales-report-tab" onclick="switchMainTab('sales-report')">销售概览报表</div>
+        </div>
+
+        <!-- 商品销售报表区域 -->
+        <section id="product-report" class="report-section active">
+            <!-- 筛选控件 -->
+            <section class="filters">
+                <div class="filter-row">
+                    <div class="filter-item">
+                        <label for="date-range">日期范围:</label>
+                        <select id="date-range" onchange="updateDateRange(this.value)">
+                            <option value="7">最近7天</option>
+                            <option value="30" selected>最近30天</option>
+                            <option value="90">最近3个月</option>
+                            <option value="365">最近1年</option>
+                            <option value="custom">自定义</option>
+                        </select>
+                    </div>
+                    <div class="filter-item" id="custom-date-container" style="display: none;">
+                        <label for="start-date">开始日期:</label>
+                        <input type="date" id="start-date">
+                        <label for="end-date">结束日期:</label>
+                        <input type="date" id="end-date">
+                        <button onclick="applyCustomDateRange()">应用</button>
+                    </div>
+                    <div class="filter-item">
+                        <label for="category-filter">商品类别:</label>
+                        <select id="category-filter" onchange="filterByCategory(this.value)">
+                            <option value="">所有类别</option>
+                            <!-- 类别选项将动态加载 -->
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 销售概览 -->
+            <section class="report-container">
+                <div class="report-header">
+                    <div class="report-title">销售概览</div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="label">总销售额</div>
+                        <div class="value" id="total-revenue">¥0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">总订单数</div>
+                        <div class="value" id="total-orders">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">平均订单金额</div>
+                        <div class="value" id="avg-order-value">¥0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">总销售数量</div>
+                        <div class="value" id="total-quantity">0</div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="sales-trend-chart"></canvas>
+                </div>
+            </section>
+
+            <!-- 类别销售表现 -->
+            <section class="report-container">
+                <div class="report-header">
+                    <div class="report-title">类别销售表现</div>
+                </div>
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('revenue-tab', this)">销售额</div>
+                    <div class="tab" onclick="switchTab('orders-tab', this)">订单数</div>
+                    <div class="tab" onclick="switchTab('quantity-tab', this)">销售量</div>
+                </div>
+                <div class="tab-content active" id="revenue-tab">
+                    <div class="chart-container">
+                        <canvas id="category-revenue-chart"></canvas>
+                    </div>
+                </div>
+                <div class="tab-content" id="orders-tab">
+                    <div class="chart-container">
+                        <canvas id="category-orders-chart"></canvas>
+                    </div>
+                </div>
+                <div class="tab-content" id="quantity-tab">
+                    <div class="chart-container">
+                        <canvas id="category-quantity-chart"></canvas>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>类别</th>
+                                <th>销售额</th>
+                                <th>订单数</th>
+                                <th>销售量</th>
+                                <th>转化率</th>
+                                <th>环比增长</th>
+                            </tr>
+                        </thead>
+                        <tbody id="category-sales-body">
+                            <!-- 类别销售数据将动态加载 -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 库存状态 -->
+            <section class="report-container">
+                <div class="report-header">
+                    <div class="report-title">库存状态</div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="inventory-status-chart"></canvas>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>状态</th>
+                                <th>商品数量</th>
+                                <th>占比</th>
+                                <th>预估价值</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-status-body">
+                            <!-- 库存状态数据将动态加载 -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 畅销商品 -->
+            <section class="report-container">
+                <div class="report-header">
+                    <div class="report-title">畅销商品</div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>商品</th>
+                                <th>类别</th>
+                                <th>销售额</th>
+                                <th>销售量</th>
+                                <th>库存状态</th>
+                                <th>负责销售</th>
+                            </tr>
+                        </thead>
+                        <tbody id="top-products-body">
+                            <!-- 畅销商品数据将动态加载 -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </section>
+
+        <!-- 销售概览报表区域 -->
+        <section id="sales-report" class="report-section">
+            <!-- 销售数据统计 -->
+            <section class="report-container">
+                <div class="report-header">
+                    <div class="report-title">销售数据统计</div>
+                </div>
+
+                <!-- 销售总额 -->
+                <div id="total-sales">
+                    <h3>总销售额</h3>
+                    <p id="total-sales-amount" class="value">加载中...</p>
+                </div>
+
+                <!-- 按时间段统计 -->
+                <div id="sales-by-period" class="report-container">
+                    <div class="report-header">
+                        <div class="report-title">按时间段统计销售额</div>
+                    </div>
+                    <div class="filter-row">
+                        <div class="filter-item">
+                            <label for="period-selector">选择时间段:</label>
+                            <select id="period-selector" onchange="loadSalesByPeriod()">
+                                <option value="day">按天</option>
+                                <option value="month" selected>按月</option>
+                                <option value="year">按年</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <canvas id="period-sales-chart"></canvas>
+                    </div>
+                    
+                    <div id="period-sales-results">
+                        <!-- 时间段销售数据将动态加载 -->
+                    </div>
+                </div>
+
+                <!-- 商品销售情况 -->
+                <div id="product-sales" class="report-container">
+                    <div class="report-header">
+                        <div class="report-title">商品销售情况</div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <canvas id="product-sales-chart"></canvas>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="data-table" id="product-sales-table">
+                            <thead>
+                                <tr>
+                                    <th>产品名称</th>
+                                    <th>类别</th>
+                                    <th>销售数量</th>
+                                    <th>销售额</th>
+                                    <th>负责销售</th>
+                                </tr>
+                            </thead>
+                            <tbody id="product-sales-body">
+                                <!-- 商品销售数据将动态加载 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 销售人员业绩 -->
+                <div id="staff-performance" class="report-container">
+                    <div class="report-header">
+                        <div class="report-title">销售人员业绩</div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <canvas id="staff-performance-chart"></canvas>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>销售人员</th>
+                                    <th>负责产品数</th>
+                                    <th>订单数</th>
+                                    <th>销售总额</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="staff-performance-body">
+                                <!-- 销售人员业绩数据将动态加载 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </section>
+    </main>
+
+    <!-- 销售人员详情模态框 -->
+    <div id="staff-details-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeStaffDetailsModal()">&times;</span>
+            <h2>销售人员详情 - <span id="staff-details-name"></span></h2>
+            <div id="staff-details-body"></div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2024 牧燕小站</p>
+    </footer>
+
+    <!-- 引入通用工具库 -->
+    <script src="js/salesUtils.js"></script>
+    <!-- 引入页面特定脚本 -->
+    <script src="js/productSalesReport.js"></script>
+    <script src="js/salesReport.js"></script>
+    <script src="js/reports.js"></script>
+</body>
+</html>

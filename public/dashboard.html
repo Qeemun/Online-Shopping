@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理控制面板</title>
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/unified-dashboard.css">
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <h1 id="dashboard-title">管理控制面板</h1>
+            <nav>
+                <a href="index.html">返回首页</a>
+                <span id="username"></span>
+                <button id="logout-button" onclick="logout()">退出登录</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Welcome Section -->
+        <section class="summary-section">
+            <div class="welcome-message">
+                <h2>欢迎，<span id="user-name">用户</span></h2>
+                <p>今天是 <span id="current-date"></span></p>
+            </div>
+            
+            <!-- Admin Summary Section -->
+            <div id="admin-summary">
+                <h3>系统概览</h3>
+                <div class="summary-cards">
+                    <div class="summary-card">
+                        <h3>用户总数</h3>
+                        <p id="total-users">加载中...</p>
+                    </div>
+                    <div class="summary-card">
+                        <h3>销售人员数</h3>
+                        <p id="total-sales-staff">加载中...</p>
+                    </div>
+                    <div class="summary-card">
+                        <h3>今日订单</h3>
+                        <p id="today-orders">加载中...</p>
+                    </div>
+                    <div class="summary-card">
+                        <h3>今日销售额</h3>
+                        <p id="today-sales">加载中...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sales Summary Section -->
+            <div id="sales-summary-container">
+                <div id="sales-summary">
+                    <h3>销售概览</h3>
+                    <div class="stats-grid" id="summary-stats">
+                        <!-- 销售统计数据将在这里动态加载 -->
+                        <p>加载中...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Admin Dashboard Section -->
+        <section id="admin-dashboard">
+            <h2>管理选项</h2>
+            <ul>
+                <li><a href="salesStaffManagement.html">销售人员管理</a></li>
+                <li><a href="orderManagement.html">订单管理</a></li>
+                <li><a href="productManagement.html">商品管理</a></li>
+                <li><a href="customerManagement.html">客户管理</a></li>
+                <li><a href="reports.html">销售报表</a></li>
+                <li><a href="systemLogs.html">系统日志</a></li>
+            </ul>
+        </section>
+
+        <!-- Sales Dashboard Section -->
+        <section id="sales-dashboard">
+            <h2>管理功能</h2>
+            <div class="dashboard-cards">
+                <div class="dashboard-card">
+                    <div class="card-icon">📊</div>
+                    <div class="card-title">商品销售统计</div>
+                    <div class="card-description">查看您负责商品的销售统计数据和趋势分析</div>
+                    <a href="reports.html" class="card-link">查看统计</a>
+                </div>
+                
+                <div class="dashboard-card">
+                    <div class="card-icon">📦</div>
+                    <div class="card-title">商品管理</div>
+                    <div class="card-description">管理您负责的商品信息、价格和库存</div>
+                    <a href="productManagement.html" class="card-link">管理商品</a>
+                </div>
+                
+                <div class="dashboard-card">
+                    <div class="card-icon">🔍</div>
+                    <div class="card-title">销售监控</div>
+                    <div class="card-description">实时监控商品销售状态和库存情况</div>
+                    <a href="productSalesMonitor.html" class="card-link">查看监控</a>
+                </div>
+                
+                <div class="dashboard-card">
+                    <div class="card-icon">📁</div>
+                    <div class="card-title">商品目录管理</div>
+                    <div class="card-description">管理商品类别和分类目录</div>
+                    <a href="categoryManagement.html" class="card-link">管理目录</a>
+                </div>
+                
+                <div class="dashboard-card">
+                    <div class="card-icon">📝</div>
+                    <div class="card-title">订单管理</div>
+                    <div class="card-description">管理与您负责商品相关的订单</div>
+                    <a href="orderManagement.html" class="card-link">管理订单</a>
+                </div>
+                
+                <div class="dashboard-card">
+                    <div class="card-icon">👥</div>
+                    <div class="card-title">客户活动日志</div>
+                    <div class="card-description">查看客户对您负责商品的浏览和购买记录</div>
+                    <a href="customerActivityLogs.html" class="card-link">查看日志</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2024 牧燕小站</p>
+    </footer>
+
+    <script src="js/dashboard.js"></script>
+</body>
+
+</html>

@@ -1,4 +1,4 @@
-/* order.css */
+/* order.css - 订单详情页面 */
 
 /* 订单详情页面 */
 #order-details {
@@ -19,24 +19,7 @@ h3 {
     margin-bottom: 15px;
 }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-    border-radius: var(--border-radius-sm);
-    overflow: hidden;
-    box-shadow: var(--shadow-sm);
-}
-
-th, td {
-    padding: 10px;
-    text-align: left;
-    border: 1px solid #ddd;
-}
-
-th {
-    background-color: #f4f4f4;
-}
+/* 注意：基本表格样式移至 common.css 或统一的 order-common.css */
 
 #order-summary {
     margin-top: 20px;
@@ -46,17 +29,4 @@ th {
     border-radius: var(--border-radius-md);
 }
 
-button {
-    background-color: #007bff;
-    color: white;
-    padding: 12px 20px;
-    font-size: 18px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    width: 100%;
-}
-
-button:hover {
-    background-color: #0056b3;
-}
+/* 注意：基本按钮样式移至 common.css 或统一的 order-common.css */
