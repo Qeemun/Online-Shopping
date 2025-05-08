@@ -31,10 +31,10 @@ function checkAuth() {
         document.body.classList.add('role-admin');
         document.getElementById('dashboard-title').textContent = '管理员控制面板';
         loadAdminSummary();
-    } else if (user.role === 'sales') {
+    } else if (user.role === 'sales' || user.role === 'seller' || user.role === 'salesStaff') {
         document.body.classList.add('role-sales');
         document.getElementById('dashboard-title').textContent = '销售管理面板';
-        loadSalesSummary();
+        loadSalesSummary(user.id); // 直接传递用户ID
     } else {
         alert('您无权访问此页面');
         window.location.href = 'index.html';
@@ -59,7 +59,7 @@ function displayCurrentDate() {
 function loadAdminSummary() {
     const token = localStorage.getItem('token');
     
-    fetch('/admin/dashboard/summary', {
+    fetch('http://localhost:3000/admin/dashboard/summary', {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`,
@@ -92,11 +92,22 @@ function loadAdminSummary() {
 }
 
 // 加载销售摘要数据
-function loadSalesSummary() {
+function loadSalesSummary(userId) {
     const token = localStorage.getItem('token');
-    const userId = localStorage.getItem('userId');
     
-    fetch(`/sales-staff/${userId}/summary`, {
+    // 确保有用户ID
+    if (!userId) {
+        userId = localStorage.getItem('userId');
+        if (!userId) {
+            console.error('用户ID未找到');
+            document.getElementById('summary-stats').innerHTML = '<p>无法加载销售摘要数据 - 用户ID未找到</p>';
+            return;
+        }
+    }
+    
+    console.log('加载销售摘要，用户ID:', userId); // 调试信息
+    
+    fetch(`http://localhost:3000/sales-staff/${userId}/summary`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`,
@@ -126,22 +137,33 @@ function loadSalesSummary() {
 function displaySalesSummary(summary) {
     const summaryStats = document.getElementById('summary-stats');
     
+    // 确保summary对象存在并包含所需属性
+    if (!summary) {
+        summaryStats.innerHTML = '<p>收到的销售摘要数据为空</p>';
+        return;
+    }
+    
+    const todayRevenue = summary.todayRevenue || 0;
+    const monthRevenue = summary.monthRevenue || 0;
+    const productCount = summary.productCount || 0;
+    const pendingOrders = summary.pendingOrders || 0;
+    
     summaryStats.innerHTML = `
         <div class="stat-card">
             <div class="label">今日销售额</div>
-            <div class="value">¥${summary.todayRevenue.toFixed(2)}</div>
+            <div class="value">¥${todayRevenue.toFixed(2)}</div>
         </div>
         <div class="stat-card">
             <div class="label">本月销售额</div>
-            <div class="value">¥${summary.monthRevenue.toFixed(2)}</div>
+            <div class="value">¥${monthRevenue.toFixed(2)}</div>
         </div>
         <div class="stat-card">
             <div class="label">负责商品数</div>
-            <div class="value">${summary.productCount}</div>
+            <div class="value">${productCount}</div>
         </div>
         <div class="stat-card">
             <div class="label">待处理订单</div>
-            <div class="value">${summary.pendingOrders}</div>
+            <div class="value">${pendingOrders}</div>
         </div>
     `;
 }

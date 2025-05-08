@@ -2,6 +2,14 @@
 let currentProductId = null;
 let salesChart = null;
 let stockChart = null;
+// 分页状态
+let pagination = {
+    page: 1,
+    limit: 20,
+    hasMore: true
+};
+// 加载状态
+let isLoading = false;
 
 // 页面加载完成后执行
 document.addEventListener('DOMContentLoaded', () => {
@@ -9,10 +17,13 @@ document.addEventListener('DOMContentLoaded', () => {
     checkAuth();
     
     // 加载销售人员负责的商品
-    loadSalesStaffProducts();
+    loadProducts();
     
-    // 初始化日期筛选器
-    initDateFilter();
+    // 初始化筛选器
+    initFilters();
+    
+    // 添加滚动事件监听器
+    window.addEventListener('scroll', handleScroll);
 });
 
 // 检查用户是否已登录且为销售人员
@@ -23,120 +34,138 @@ function checkAuth() {
     if (!token || !userStr) {
         alert('请先登录');
         window.location.href = 'login.html';
-        return;
+        return false;
     }
     
     const user = JSON.parse(userStr);
     console.log('当前用户角色:', user.role); // 调试信息
     
     // 检查用户是否为销售人员
-    if (user.role !== 'sales' && user.role !== 'seller' && user.role !== 'salesStaff') {
+    if (user.role !== 'sales' && user.role !== 'seller' && user.role !== 'salesStaff' && user.role !== 'admin') {
         alert('您无权访问此页面');
         window.location.href = 'index.html';
-        return;
+        return false;
     }
+    
+    return true;
 }
 
-// 初始化日期筛选器
-function initDateFilter() {
-    // 设置默认日期范围（最近30天）
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 30);
+// 初始化筛选器
+function initFilters() {
+    // 加载所有类别
+    loadCategories();
     
-    document.getElementById('start-date').valueAsDate = startDate;
-    document.getElementById('end-date').valueAsDate = endDate;
-    
-    // 添加日期筛选事件监听器
-    document.getElementById('date-filter-form').addEventListener('submit', function(event) {
-        event.preventDefault();
-        
-        if (currentProductId) {
-            loadProductSalesData(currentProductId);
-        }
-    });
+    // 添加筛选事件监听器
+    document.getElementById('category-filter').addEventListener('change', filterProducts);
+    document.getElementById('status-filter').addEventListener('change', filterProducts);
 }
 
-// 加载销售人员负责的商品
-async function loadSalesStaffProducts() {
+// 加载所有类别
+async function loadCategories() {
     try {
-        const token = localStorage.getItem('token');
-        const userId = localStorage.getItem('userId');
-        
-        const response = await fetch(`/sales-staff/${userId}/products`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
+        const response = await fetch('http://localhost:3000/products/categories/all');
         
         if (!response.ok) {
-            throw new Error('获取负责商品失败');
+            throw new Error('获取商品类别失败');
         }
         
         const data = await response.json();
         
         if (!data.success) {
-            throw new Error(data.message || '获取负责商品失败');
+            throw new Error(data.message || '获取商品类别失败');
         }
         
-        displaySalesStaffProducts(data.products);
+        // 填充类别筛选器
+        const categoryFilter = document.getElementById('category-filter');
+        data.categories.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            categoryFilter.appendChild(option);
+        });
     } catch (error) {
-        console.error('加载销售人员商品出错:', error);
-        showNotification('加载负责商品失败', 'error');
+        console.error('加载类别失败:', error);
+        showNotification('加载商品类别失败', 'error');
     }
 }
 
-// 显示销售人员的商品
-function displaySalesStaffProducts(products) {
-    const productsList = document.getElementById('products-list');
-    productsList.innerHTML = '';
+// 处理滚动事件
+function handleScroll() {
+    // 如果正在加载或没有更多数据，则不处理
+    if (isLoading || !pagination.hasMore) return;
     
-    if (products.length === 0) {
-        productsList.innerHTML = '<p>您尚未负责任何商品</p>';
-        return;
+    // 计算滚动位置
+    const scrollPosition = window.innerHeight + window.scrollY;
+    const bodyHeight = document.body.offsetHeight;
+    
+    // 当滚动到距离底部200px时，加载更多数据
+    if (scrollPosition >= bodyHeight - 200) {
+        loadMoreProducts();
     }
-    
-    products.forEach(product => {
-        const productItem = document.createElement('div');
-        productItem.className = 'product-item';
-        productItem.innerHTML = `
-            <h3>${product.name}</h3>
-            <p>类别: ${product.category || '未分类'}</p>
-            <p>价格: ¥${product.price}</p>
-            <p>库存: ${product.stock}</p>
-            <button onclick="viewProductSales(${product.id})">查看销售数据</button>
-            <button onclick="editProductInfo(${product.id})">修改信息</button>
+}
+
+// 加载所有商品 (初始加载)
+async function loadProducts() {
+    try {
+        if (!checkAuth()) return;
+        
+        // 重置分页
+        pagination = {
+            page: 1,
+            limit: 20,
+            hasMore: true
+        };
+        isLoading = false;
+        
+        // 清空产品列表
+        document.getElementById('product-status-body').innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center;">加载中...</td>
+            </tr>
         `;
-        productsList.appendChild(productItem);
-    });
-    
-    // 默认显示第一个商品的销售数据
-    if (products.length > 0) {
-        viewProductSales(products[0].id);
+        
+        // 加载第一页数据
+        await loadMoreProducts(true);
+        
+    } catch (error) {
+        console.error('加载商品失败:', error);
+        document.getElementById('product-status-body').innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center;">加载商品数据失败: ${error.message}</td>
+            </tr>
+        `;
+        showNotification('加载商品失败: ' + error.message, 'error');
     }
 }
 
-// 查看商品销售数据
-function viewProductSales(productId) {
-    currentProductId = productId;
+// 加载更多商品 (无限滚动)
+async function loadMoreProducts(isInitialLoad = false) {
+    if (isLoading || !pagination.hasMore) return;
     
-    // 加载商品销售数据
-    loadProductSalesData(productId);
+    isLoading = true;
     
-    // 加载商品浏览日志
-    loadProductViewLogs(productId);
-}
-
-// 加载商品销售数据
-async function loadProductSalesData(productId) {
     try {
         const token = localStorage.getItem('token');
-        const startDate = document.getElementById('start-date').value;
-        const endDate = document.getElementById('end-date').value;
         
-        const response = await fetch(`/sales-reports/products/${productId}/sales?startDate=${startDate}&endDate=${endDate}`, {
+        // 显示加载指示器
+        if (!isInitialLoad) {
+            showLoadingIndicator();
+        }
+        
+        // 构建请求参数
+        const params = new URLSearchParams({
+            page: pagination.page,
+            limit: pagination.limit
+        });
+        
+        // 添加筛选条件
+        const categoryFilter = document.getElementById('category-filter').value;
+        if (categoryFilter) {
+            params.append('category', categoryFilter);
+        }
+        
+        // 发送请求
+        const response = await fetch(`http://localhost:3000/products?${params}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -145,368 +174,274 @@ async function loadProductSalesData(productId) {
         });
         
         if (!response.ok) {
-            throw new Error('获取商品销售数据失败');
+            throw new Error('获取商品数据失败');
         }
         
         const data = await response.json();
         
         if (!data.success) {
-            throw new Error(data.message || '获取商品销售数据失败');
+            throw new Error(data.message || '获取商品数据失败');
         }
         
-        // 显示商品销售数据
-        displayProductSalesData(data.productSales);
+        // 清除初始加载指示器
+        if (isInitialLoad) {
+            document.getElementById('product-status-body').innerHTML = '';
+        } else {
+            hideLoadingIndicator();
+        }
         
-        // 显示销售趋势图表
-        renderSalesChart(data.salesTrend);
+        // 更新分页信息
+        if (data.pagination) {
+            pagination = {
+                page: pagination.page + 1,
+                limit: pagination.limit,
+                hasMore: data.pagination.hasMore
+            };
+        } else {
+            pagination.hasMore = false;
+        }
         
-        // 显示库存趋势图表
-        renderStockChart(data.stockTrend);
+        // 保存所有商品数据
+        if (isInitialLoad) {
+            window.allProducts = data.products;
+        } else {
+            window.allProducts = [...(window.allProducts || []), ...data.products];
+        }
+        
+        // 显示商品数据
+        displayProducts(data.products, isInitialLoad);
+        
+        // 仅在初次加载时渲染图表
+        if (isInitialLoad) {
+            renderSalesChart(window.allProducts);
+        }
+        
+        // 如果没有更多数据，显示结束提示
+        if (!pagination.hasMore) {
+            showEndMessage();
+        }
+        
     } catch (error) {
-        console.error('加载商品销售数据出错:', error);
-        showNotification('加载商品销售数据失败', 'error');
+        console.error('加载更多商品失败:', error);
+        showNotification('加载更多商品失败: ' + error.message, 'error');
+    } finally {
+        isLoading = false;
     }
 }
 
-// 显示商品销售数据
-function displayProductSalesData(productSales) {
-    const salesDataSection = document.getElementById('sales-data');
+// 显示商品列表
+function displayProducts(products, isInitialLoad = false) {
+    const tableBody = document.getElementById('product-status-body');
     
-    // 清空旧数据
-    salesDataSection.innerHTML = '';
-    
-    // 创建销售数据概览
-    const salesOverview = document.createElement('div');
-    salesOverview.className = 'sales-overview';
-    salesOverview.innerHTML = `
-        <div class="sales-stat">
-            <h4>总销售额</h4>
-            <p>¥${productSales.totalRevenue.toFixed(2)}</p>
-        </div>
-        <div class="sales-stat">
-            <h4>总销售量</h4>
-            <p>${productSales.totalQuantity} 件</p>
-        </div>
-        <div class="sales-stat">
-            <h4>订单数</h4>
-            <p>${productSales.orderCount} 笔</p>
-        </div>
-        <div class="sales-stat">
-            <h4>平均单价</h4>
-            <p>¥${(productSales.totalRevenue / productSales.totalQuantity).toFixed(2)}</p>
-        </div>
-        <div class="sales-stat">
-            <h4>当前库存</h4>
-            <p>${productSales.currentStock} 件</p>
-        </div>
-    `;
-    
-    // 添加到页面
-    salesDataSection.appendChild(salesOverview);
-    
-    // 显示图表容器
-    document.getElementById('sales-chart-container').style.display = 'block';
-    document.getElementById('stock-chart-container').style.display = 'block';
-}
-
-// 渲染销售趋势图表
-function renderSalesChart(salesTrend) {
-    const ctx = document.getElementById('sales-chart').getContext('2d');
-    
-    // 销毁旧图表
-    if (salesChart) {
-        salesChart.destroy();
-    }
-    
-    // 准备图表数据
-    const dates = salesTrend.map(item => item.date);
-    const revenues = salesTrend.map(item => item.revenue);
-    const quantities = salesTrend.map(item => item.quantity);
-    
-    // 创建新图表
-    salesChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: dates,
-            datasets: [
-                {
-                    label: '销售额 (¥)',
-                    data: revenues,
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    borderWidth: 2,
-                    fill: true,
-                    yAxisID: 'y'
-                },
-                {
-                    label: '销售量 (件)',
-                    data: quantities,
-                    borderColor: 'rgba(153, 102, 255, 1)',
-                    backgroundColor: 'rgba(153, 102, 255, 0.2)',
-                    borderWidth: 2,
-                    fill: true,
-                    yAxisID: 'y1'
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            interaction: {
-                mode: 'index',
-                intersect: false
-            },
-            scales: {
-                y: {
-                    type: 'linear',
-                    display: true,
-                    position: 'left',
-                    title: {
-                        display: true,
-                        text: '销售额 (¥)'
-                    }
-                },
-                y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    title: {
-                        display: true,
-                        text: '销售量 (件)'
-                    },
-                    grid: {
-                        drawOnChartArea: false
-                    }
-                }
-            }
+    if (!products || products.length === 0) {
+        if (isInitialLoad) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center;">暂无商品数据</td>
+                </tr>
+            `;
         }
-    });
-}
-
-// 渲染库存趋势图表
-function renderStockChart(stockTrend) {
-    const ctx = document.getElementById('stock-chart').getContext('2d');
-    
-    // 销毁旧图表
-    if (stockChart) {
-        stockChart.destroy();
+        return;
     }
     
-    // 准备图表数据
-    const dates = stockTrend.map(item => item.date);
-    const stocks = stockTrend.map(item => item.stock);
+    // 获取当前筛选条件
+    const categoryFilter = document.getElementById('category-filter').value;
+    const statusFilter = document.getElementById('status-filter').value;
     
-    // 创建新图表
-    stockChart = new Chart(ctx, {
-        type: 'line',
+    // 筛选商品
+    let filteredProducts = products;
+    
+    if (statusFilter) {
+        filteredProducts = filteredProducts.filter(product => {
+            if (statusFilter === 'normal' && product.stock > 10) {
+                return true;
+            } else if (statusFilter === 'warning' && product.stock > 0 && product.stock <= 10) {
+                return true;
+            } else if (statusFilter === 'danger' && product.stock <= 0) {
+                return true;
+            }
+            return false;
+        });
+    }
+    
+    // 仅在初始加载或有筛选条件时排序
+    if (isInitialLoad || statusFilter) {
+        // 按库存状态排序（库存紧急的排前面）
+        filteredProducts.sort((a, b) => a.stock - b.stock);
+    }
+    
+    // 添加商品行
+    const fragment = document.createDocumentFragment();
+    
+    filteredProducts.forEach(product => {
+        // 确定库存状态
+        let stockStatus;
+        let statusClass;
+        
+        if (product.stock <= 0) {
+            stockStatus = '紧急补货';
+            statusClass = 'danger';
+        } else if (product.stock <= 10) {
+            stockStatus = '库存不足';
+            statusClass = 'warning';
+        } else {
+            stockStatus = '库存正常';
+            statusClass = 'normal';
+        }
+        
+        // 格式化最近销售时间
+        const lastSale = product.lastSale ? formatDateTime(product.lastSale) : '暂无销售';
+        
+        const row = document.createElement('tr');
+        row.className = statusClass;
+        row.innerHTML = `
+            <td>${product.name}</td>
+            <td>${product.category || '未分类'}</td>
+            <td>${product.soldQuantity || 0}</td>
+            <td>${product.stock}</td>
+            <td class="status ${statusClass}">${stockStatus}</td>
+            <td>${lastSale}</td>
+        `;
+        
+        fragment.appendChild(row);
+    });
+    
+    tableBody.appendChild(fragment);
+}
+
+// 筛选商品
+function filterProducts() {
+    // 清空表格
+    document.getElementById('product-status-body').innerHTML = '';
+    
+    // 重置分页
+    pagination = {
+        page: 1,
+        limit: 20,
+        hasMore: true
+    };
+    
+    // 重新加载商品
+    loadProducts();
+}
+
+// 显示加载指示器
+function showLoadingIndicator() {
+    // 查找是否已有加载指示器
+    let loadingIndicator = document.getElementById('loading-indicator');
+    
+    // 如果没有，创建一个
+    if (!loadingIndicator) {
+        loadingIndicator = document.createElement('tr');
+        loadingIndicator.id = 'loading-indicator';
+        loadingIndicator.innerHTML = `
+            <td colspan="6" class="text-center">
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                    <p>加载更多商品...</p>
+                </div>
+            </td>
+        `;
+        document.getElementById('product-status-body').appendChild(loadingIndicator);
+    } else {
+        loadingIndicator.style.display = '';
+    }
+}
+
+// 隐藏加载指示器
+function hideLoadingIndicator() {
+    const loadingIndicator = document.getElementById('loading-indicator');
+    if (loadingIndicator) {
+        loadingIndicator.style.display = 'none';
+    }
+}
+
+// 显示结束信息
+function showEndMessage() {
+    // 查找是否已有结束信息
+    let endMessage = document.getElementById('end-message');
+    
+    // 如果没有，创建一个
+    if (!endMessage) {
+        endMessage = document.createElement('tr');
+        endMessage.id = 'end-message';
+        endMessage.innerHTML = `
+            <td colspan="6" class="text-center">
+                <div class="end-message">
+                    已加载全部商品
+                </div>
+            </td>
+        `;
+        document.getElementById('product-status-body').appendChild(endMessage);
+    } else {
+        endMessage.style.display = '';
+    }
+}
+
+// 渲染销售图表
+function renderSalesChart(products) {
+    // 如果页面上没有图表元素，则不渲染
+    const chartCanvas = document.getElementById('sales-chart');
+    if (!chartCanvas) return;
+    
+    // 获取销售量最高的前5个商品
+    const topProducts = [...products]
+        .sort((a, b) => (b.soldQuantity || 0) - (a.soldQuantity || 0))
+        .slice(0, 5);
+    
+    // 准备图表数据
+    const labels = topProducts.map(p => p.name);
+    const salesData = topProducts.map(p => p.soldQuantity || 0);
+    const stockData = topProducts.map(p => p.stock);
+    
+    // 创建图表
+    if (window.salesChart) {
+        window.salesChart.destroy();
+    }
+    
+    window.salesChart = new Chart(chartCanvas, {
+        type: 'bar',
         data: {
-            labels: dates,
+            labels: labels,
             datasets: [
                 {
-                    label: '库存量 (件)',
-                    data: stocks,
-                    borderColor: 'rgba(255, 159, 64, 1)',
-                    backgroundColor: 'rgba(255, 159, 64, 0.2)',
-                    borderWidth: 2,
-                    fill: true
+                    label: '已售数量',
+                    data: salesData,
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: '库存数量',
+                    data: stockData,
+                    backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
                 }
             ]
         },
         options: {
             responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: '畅销商品销售与库存'
+                },
+                legend: {
+                    position: 'top'
+                }
+            },
             scales: {
                 y: {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: '库存量 (件)'
+                        text: '数量'
                     }
                 }
             }
         }
     });
-}
-
-// 加载商品浏览日志
-async function loadProductViewLogs(productId) {
-    try {
-        const token = localStorage.getItem('token');
-        const startDate = document.getElementById('start-date').value;
-        const endDate = document.getElementById('end-date').value;
-        
-        const response = await fetch(`/activity-logs/products/${productId}/views?startDate=${startDate}&endDate=${endDate}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error('获取商品浏览日志失败');
-        }
-        
-        const data = await response.json();
-        
-        if (!data.success) {
-            throw new Error(data.message || '获取商品浏览日志失败');
-        }
-        
-        // 显示商品浏览日志
-        displayProductViewLogs(data.logs);
-    } catch (error) {
-        console.error('加载商品浏览日志出错:', error);
-        showNotification('加载商品浏览日志失败', 'error');
-    }
-}
-
-// 显示商品浏览日志
-function displayProductViewLogs(logs) {
-    const logsContainer = document.getElementById('view-logs');
-    logsContainer.innerHTML = '';
-    
-    if (logs.length === 0) {
-        logsContainer.innerHTML = '<p>该时间段内没有浏览记录</p>';
-        return;
-    }
-    
-    // 创建日志表格
-    const table = document.createElement('table');
-    table.className = 'logs-table';
-    
-    // 创建表头
-    const thead = document.createElement('thead');
-    thead.innerHTML = `
-        <tr>
-            <th>用户</th>
-            <th>动作</th>
-            <th>时间</th>
-            <th>来源页面</th>
-        </tr>
-    `;
-    table.appendChild(thead);
-    
-    // 创建表体
-    const tbody = document.createElement('tbody');
-    logs.forEach(log => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${log.user ? log.user.username : '访客'}</td>
-            <td>${log.action}</td>
-            <td>${formatDateTime(log.createdAt)}</td>
-            <td>${log.referrer || '直接访问'}</td>
-        `;
-        tbody.appendChild(row);
-    });
-    table.appendChild(tbody);
-    
-    // 添加到页面
-    logsContainer.appendChild(table);
-}
-
-// 编辑商品信息
-function editProductInfo(productId) {
-    // 获取商品详情
-    fetchProductDetails(productId);
-}
-
-// 获取商品详情
-async function fetchProductDetails(productId) {
-    try {
-        const token = localStorage.getItem('token');
-        
-        const response = await fetch(`/products/${productId}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error('获取商品详情失败');
-        }
-        
-        const data = await response.json();
-        
-        if (!data.success) {
-            throw new Error(data.message || '获取商品详情失败');
-        }
-        
-        // 显示编辑表单
-        displayEditForm(data.product);
-    } catch (error) {
-        console.error('获取商品详情出错:', error);
-        showNotification('获取商品详情失败', 'error');
-    }
-}
-
-// 显示编辑表单
-function displayEditForm(product) {
-    // 获取编辑表单容器
-    const editFormContainer = document.getElementById('edit-product-form');
-    
-    // 填充表单数据
-    document.getElementById('edit-product-id').value = product.id;
-    document.getElementById('edit-product-name').value = product.name;
-    document.getElementById('edit-product-price').value = product.price;
-    document.getElementById('edit-product-stock').value = product.stock;
-    
-    // 显示表单
-    editFormContainer.style.display = 'block';
-    
-    // 滚动到表单位置
-    editFormContainer.scrollIntoView({ behavior: 'smooth' });
-}
-
-// 更新商品信息
-async function updateProductInfo(event) {
-    event.preventDefault();
-    
-    const productId = document.getElementById('edit-product-id').value;
-    const price = document.getElementById('edit-product-price').value;
-    const stock = document.getElementById('edit-product-stock').value;
-    
-    try {
-        const token = localStorage.getItem('token');
-        
-        const response = await fetch(`/products/${productId}`, {
-            method: 'PATCH',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                price,
-                stock
-            })
-        });
-        
-        if (!response.ok) {
-            throw new Error('更新商品信息失败');
-        }
-        
-        const data = await response.json();
-        
-        if (!data.success) {
-            throw new Error(data.message || '更新商品信息失败');
-        }
-        
-        // 隐藏表单
-        document.getElementById('edit-product-form').style.display = 'none';
-        
-        // 重新加载商品列表
-        loadSalesStaffProducts();
-        
-        showNotification('商品信息更新成功', 'success');
-    } catch (error) {
-        console.error('更新商品信息出错:', error);
-        showNotification(error.message, 'error');
-    }
-}
-
-// 取消编辑
-function cancelEdit() {
-    document.getElementById('edit-product-form').style.display = 'none';
 }
 
 // 显示通知

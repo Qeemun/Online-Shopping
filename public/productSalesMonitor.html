@@ -9,6 +9,10 @@
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/unified-dashboard.css">
     <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/productSalesMonitor.css">
+    
+    <!-- 引入Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -29,14 +33,14 @@
         <div class="filter-controls">
             <div class="filter-item">
                 <label for="category-filter">按类别:</label>
-                <select id="category-filter" onchange="filterProducts()">
+                <select id="category-filter">
                     <option value="">全部类别</option>
                     <!-- 类别选项将动态加载 -->
                 </select>
             </div>
             <div class="filter-item">
                 <label for="status-filter">按状态:</label>
-                <select id="status-filter" onchange="filterProducts()">
+                <select id="status-filter">
                     <option value="">全部状态</option>
                     <option value="normal">库存正常</option>
                     <option value="warning">库存不足</option>
@@ -76,8 +80,6 @@
         <p>&copy; 2024 牧燕小站</p>
     </footer>
 
-    <!-- 引入通用工具库 -->
-    <script src="js/salesUtils.js"></script>
     <!-- 引入页面特定脚本 -->
     <script src="js/productSalesMonitor.js"></script>
 </body>

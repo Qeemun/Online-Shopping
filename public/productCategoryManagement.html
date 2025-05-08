@@ -3,26 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>商品管理 - 销售管理</title>
+    <title>商品与类别管理 - 销售管理</title>
     <link rel="stylesheet" href="css/variables.css">
     <link rel="stylesheet" href="css/common.css">
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/unified-dashboard.css">
     <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/productCategoryManagement.css">
 </head>
 
 <body>
     <!-- Header -->
     <header>
-        <h1>商品管理</h1>
+        <h1>商品与类别管理</h1>
         <nav>
             <a href="dashboard.html">返回管理面板</a>
             <a href="index.html">首页</a>
         </nav>
     </header>
 
-    <!-- Product Management Section -->
-    <section id="product-management">
+    <!-- 选项卡导航 -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="openTab('product-tab')">商品管理</button>
+        <button class="tab-btn" onclick="openTab('category-tab')">类别管理</button>
+    </div>
+
+    <!-- 商品管理选项卡 -->
+    <div id="product-tab" class="tab-content active">
         <h2>管理商品</h2>
         <button id="add-product-btn" onclick="showAddProductForm()">添加新产品</button>
 
@@ -59,6 +66,7 @@
                     <img id="image-preview" style="max-width: 200px; display: none;">
                 </div>
                 <button type="submit">添加商品</button>
+                <button type="button" onclick="hideAddProductForm()">取消</button>
             </form>
         </div>
 
@@ -96,6 +104,7 @@
                     <img id="edit-image-preview" style="max-width: 200px; display: none;">
                 </div>
                 <button type="submit">更新商品</button>
+                <button type="button" onclick="hideEditProductForm()">取消</button>
             </form>
         </div>
 
@@ -117,14 +126,80 @@
                 </tbody>
             </table>
         </div>
-    </section>
+    </div>
+
+    <!-- 类别管理选项卡 -->
+    <div id="category-tab" class="tab-content">
+        <h2>管理商品类别</h2>
+        
+        <div class="category-container">
+            <!-- 添加类别表单 -->
+            <div class="category-form">
+                <h3>添加新类别</h3>
+                <form id="add-category-form" onsubmit="addCategory(event)">
+                    <div class="form-group">
+                        <label for="category-name">类别名称:</label>
+                        <input type="text" id="category-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="category-description">类别描述:</label>
+                        <textarea id="category-description" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="parent-category">父类别(可选):</label>
+                        <select id="parent-category">
+                            <option value="">-- 顶级类别 --</option>
+                            <!-- 父类别选项将动态加载 -->
+                        </select>
+                    </div>
+                    <button type="submit">添加类别</button>
+                </form>
+            </div>
+            
+            <!-- 类别列表 -->
+            <div class="category-list">
+                <h3>现有类别</h3>
+                <div id="categories-container">
+                    <p class="loading">加载中...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑类别模态框 -->
+    <div id="edit-category-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="document.getElementById('edit-category-modal').style.display='none'">&times;</span>
+            <h3>编辑类别</h3>
+            <form id="edit-category-form" onsubmit="updateCategory(event)">
+                <input type="hidden" id="edit-category-id">
+                <div class="form-group">
+                    <label for="edit-category-name">类别名称:</label>
+                    <input type="text" id="edit-category-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-category-description">类别描述:</label>
+                    <textarea id="edit-category-description" rows="3"></textarea>
+                </div>
+                <button type="submit">保存更改</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 类别商品模态框 -->
+    <div id="products-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('products-modal')">&times;</span>
+            <h3 id="category-products-title">类别商品</h3>
+            <div id="category-products-container"></div>
+        </div>
+    </div>
 
     <!-- Footer -->
     <footer>
         <p>&copy; 2024 牧燕小站</p>
     </footer>
 
-    <script src="js/productManagement.js"></script>
+    <script src="js/productCategoryManagement.js"></script>
 </body>
-
 </html>

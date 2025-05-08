@@ -123,3 +123,137 @@
         padding: 8px 10px;
     }
 }
+
+/* 商品销售监控样式 */
+
+.chart-container {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.filter-controls {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    background-color: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.filter-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-item label {
+    font-weight: 500;
+}
+
+.filter-item select {
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+}
+
+.table-container {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow-x: auto;
+}
+
+#product-status-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#product-status-table th {
+    text-align: left;
+    padding: 12px 10px;
+    border-bottom: 2px solid #f0f0f0;
+    font-weight: 600;
+    color: #333;
+}
+
+#product-status-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+#product-status-table tr:hover {
+    background-color: #f9f9f9;
+}
+
+/* 状态颜色 */
+.status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+    display: inline-block;
+}
+
+.normal {
+    color: #28a745;
+}
+
+.warning {
+    color: #ffc107;
+}
+
+.danger {
+    color: #dc3545;
+}
+
+/* 状态行背景 */
+tr.normal {
+    background-color: rgba(40, 167, 69, 0.05);
+}
+
+tr.warning {
+    background-color: rgba(255, 193, 7, 0.05);
+}
+
+tr.danger {
+    background-color: rgba(220, 53, 69, 0.05);
+}
+
+/* 无限滚动相关样式 */
+.loading-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px 0;
+}
+
+.spinner {
+    width: 30px;
+    height: 30px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.text-center {
+    text-align: center;
+}
+
+.end-message {
+    padding: 15px;
+    color: #666;
+    text-align: center;
+    font-style: italic;
+}
