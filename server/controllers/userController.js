@@ -117,8 +117,9 @@ exports.verifyToken = (requiredRole) => {
 
         jwt.verify(token, jwtSecret, async (err, decoded) => {  // 使用环境变量中的 JWT 密钥
             if (err) {
-                return res.status(401).json({ success: false, message: '未授权' });
+                return res.status(401).json({ success: false, message: '授权已超时，请重新登录' });
             }
+            
 
             req.userId = decoded.userId; // 将用户 ID 存入请求中，供后续操作使用
             req.role = decoded.role;  // 将用户角色存入请求中
@@ -146,7 +147,11 @@ exports.getUserProfile = async (req, res) => {
         const user = await User.findByPk(userId);  // 根据 ID 查找用户
 
         if (!user) {
-            return res.status(404).json({ success: false,message: '用户未找到' });
+            return res.status(404).json({ 
+            success: false, 
+            message: '授权已超时，请重新登录',
+            logout: true // 告诉前端需要注销
+            });
         }
 
         // 返回用户信息（你可以根据需要选择返回哪些字段）

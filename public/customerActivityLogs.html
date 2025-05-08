@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>客户活动日志 - 销售管理</title>
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <style>
+        .filter-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .filter-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .filter-item label {
+            font-weight: 500;
+        }
+        
+        .filter-item select, .filter-item input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .activity-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .log-table th, .log-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .log-table th {
+            background-color: #f9f9f9;
+            font-weight: 500;
+        }
+        
+        .log-table tbody tr:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .action-tag {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+        
+        .view-tag {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .cart-tag {
+            background-color: #e8f5e9;
+            color: #388e3c;
+        }
+        
+        .purchase-tag {
+            background-color: #fff8e1;
+            color: #f57f17;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+            gap: 5px;
+        }
+        
+        .pagination button {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            background: white;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        
+        .pagination button.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .pagination button:hover:not(.active) {
+            background: #f5f5f5;
+        }
+        
+        .pagination button:disabled {
+            color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .no-logs {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+        }
+        
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: #f9f9f9;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin: 10px 0;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <h1>客户活动日志</h1>
+        <nav>
+            <a href="salesDashboard.html">返回管理面板</a>
+            <a href="index.html">首页</a>
+        </nav>
+    </header>
+
+    <!-- Activity Logs Section -->
+    <section id="activity-logs">
+        <h2>客户活动记录</h2>
+        
+        <!-- 筛选器 -->
+        <div class="filter-section">
+            <h3>筛选选项</h3>
+            <form id="filter-form" onsubmit="filterLogs(event)">
+                <div class="filter-row">
+                    <div class="filter-item">
+                        <label for="product-filter">商品:</label>
+                        <select id="product-filter">
+                            <option value="">所有商品</option>
+                            <!-- 商品选项将动态加载 -->
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label for="action-filter">活动类型:</label>
+                        <select id="action-filter">
+                            <option value="">所有活动</option>
+                            <option value="view">浏览</option>
+                            <option value="add_to_cart">加入购物车</option>
+                            <option value="purchase">购买</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label for="date-range">时间范围:</label>
+                        <select id="date-range" onchange="toggleCustomDateInputs()">
+                            <option value="today">今天</option>
+                            <option value="yesterday">昨天</option>
+                            <option value="7days" selected>最近7天</option>
+                            <option value="30days">最近30天</option>
+                            <option value="custom">自定义</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="filter-row" id="custom-date-inputs" style="display: none;">
+                    <div class="filter-item">
+                        <label for="start-date">开始日期:</label>
+                        <input type="date" id="start-date">
+                    </div>
+                    <div class="filter-item">
+                        <label for="end-date">结束日期:</label>
+                        <input type="date" id="end-date">
+                    </div>
+                </div>
+                <button type="submit">应用筛选</button>
+            </form>
+        </div>
+        
+        <!-- 活动统计 -->
+        <div class="activity-section">
+            <h3>活动统计</h3>
+            <div class="stats-container" id="activity-stats">
+                <!-- 统计数据将动态加载 -->
+                <div class="stat-card">
+                    <div class="stat-label">总浏览次数</div>
+                    <div class="stat-value" id="total-views">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">加入购物车次数</div>
+                    <div class="stat-value" id="total-carts">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">购买次数</div>
+                    <div class="stat-value" id="total-purchases">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">转化率</div>
+                    <div class="stat-value" id="conversion-rate">0%</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 活动日志列表 -->
+        <div class="activity-section">
+            <h3>活动记录列表</h3>
+            <div id="logs-container">
+                <table class="log-table">
+                    <thead>
+                        <tr>
+                            <th>时间</th>
+                            <th>用户</th>
+                            <th>商品</th>
+                            <th>活动类型</th>
+                            <th>来源页面</th>
+                            <th>详情</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logs-body">
+                        <!-- 日志数据将动态加载 -->
+                        <tr>
+                            <td colspan="6" class="loading">加载中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <!-- 分页控件 -->
+                <div class="pagination" id="pagination-controls">
+                    <!-- 分页按钮将动态加载 -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2024 牧燕小站</p>
+    </footer>
+
+    <script src="js/customerActivityLogs.js"></script>
+</body>
+</html>

@@ -2,15 +2,22 @@ const db = require('../models');
 const Product = db.Product;
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
+
+// 确保上传目录存在
+const uploadDir = path.join(__dirname, '../../public/images/products');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 // 配置文件存储
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'public/uploads/') // 确保此目录存在
+        cb(null, uploadDir); // 使用项目根目录下的public/images/products
     },
     filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
-        cb(null, uniqueSuffix + path.extname(file.originalname))
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, 'product-' + uniqueSuffix + path.extname(file.originalname));
     }
 });
 
@@ -135,8 +142,9 @@ exports.getProductDetails = async (req, res) => {
 // 创建新产品
 exports.createProduct = async (req, res) => {
     try {
-        const { name, description, price, stock } = req.body;
-        const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+        const { name, description, price, stock, category } = req.body;
+        // 更新图片URL路径格式
+        const imageUrl = req.file ? `/images/products/${req.file.filename}` : null;
         
         // 输入验证
         if (!name || !price) {
@@ -151,6 +159,7 @@ exports.createProduct = async (req, res) => {
             description,
             price,
             stock: stock || 0,
+            category,
             imageUrl
         });
 
@@ -199,9 +208,9 @@ exports.updateProduct = async (req, res) => {
             });
         }
 
-        // 更新图片
+        // 更新图片，使用新的路径格式
         if (req.file) {
-            updates.imageUrl = `/uploads/${req.file.filename}`;
+            updates.imageUrl = `/images/products/${req.file.filename}`;
         }
 
         await product.update(updates);
@@ -245,6 +254,178 @@ exports.deleteProduct = async (req, res) => {
         res.status(500).json({
             success: false,
             message: '删除产品时出错',
+            error: error.message
+        });
+    }
+};
+
+// 获取所有商品类别
+exports.getAllCategories = async (req, res) => {
+    try {
+        // 查询所有产品的类别字段
+        const products = await Product.findAll({
+            attributes: ['category'],
+            where: {
+                category: {
+                    [db.Sequelize.Op.not]: null
+                }
+            }
+        });
+        
+        // 提取唯一的类别
+        const categories = [...new Set(products.map(product => product.category))].filter(Boolean);
+        
+        res.status(200).json({
+            success: true,
+            categories
+        });
+    } catch (error) {
+        console.error('获取类别列表失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '获取类别列表失败',
+            error: error.message
+        });
+    }
+};
+
+// 获取指定类别的所有商品
+exports.getProductsByCategory = async (req, res) => {
+    try {
+        const { category } = req.params;
+        
+        // 查询指定类别的所有商品
+        const products = await Product.findAll({
+            where: { category }
+        });
+        
+        res.status(200).json({
+            success: true,
+            category,
+            products
+        });
+    } catch (error) {
+        console.error('获取类别商品失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '获取类别商品失败',
+            error: error.message
+        });
+    }
+};
+
+// 添加新商品类别
+exports.addCategory = async (req, res) => {
+    try {
+        const { name, description } = req.body;
+        
+        if (!name) {
+            return res.status(400).json({
+                success: false,
+                message: '类别名称不能为空'
+            });
+        }
+        
+        // 检查类别是否已存在
+        const existingProducts = await Product.findAll({
+            where: { category: name },
+            limit: 1
+        });
+        
+        if (existingProducts.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: '该类别已存在'
+            });
+        }
+        
+        // 创建一个示例产品作为该类别的第一个产品
+        const placeholderProduct = await Product.create({
+            name: `${name} - 示例产品`,
+            description: description || `${name}类别的示例产品`,
+            price: 0,
+            stock: 0,
+            category: name
+        });
+        
+        res.status(201).json({
+            success: true,
+            message: '类别添加成功',
+            category: {
+                name,
+                description,
+                firstProduct: placeholderProduct
+            }
+        });
+    } catch (error) {
+        console.error('添加类别失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '添加类别失败',
+            error: error.message
+        });
+    }
+};
+
+// 删除商品类别
+exports.deleteCategory = async (req, res) => {
+    try {
+        const { category } = req.params;
+        
+        // 查询该类别的所有商品
+        const products = await Product.findAll({
+            where: { category }
+        });
+        
+        if (products.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '类别不存在或没有相关商品'
+            });
+        }
+        
+        // 检查当前用户权限
+        if (req.user.role === 'sales') {
+            // 如果是销售人员，还需要检查是否分配了这些产品
+            const SalesProductAssignment = db.sequelize.models.SalesProductAssignment;
+            
+            // 获取所有产品ID
+            const productIds = products.map(product => product.id);
+            
+            // 检查是否所有产品都分配给了该销售人员
+            const assignments = await SalesProductAssignment.findAll({
+                where: {
+                    productId: {
+                        [db.Sequelize.Op.in]: productIds
+                    },
+                    salesId: req.userId
+                }
+            });
+            
+            if (assignments.length !== productIds.length) {
+                return res.status(403).json({
+                    success: false,
+                    message: '无权操作此类别的部分商品'
+                });
+            }
+        }
+        
+        // 将所有该类别的商品的类别设为null
+        await Product.update(
+            { category: null },
+            { where: { category } }
+        );
+        
+        res.status(200).json({
+            success: true,
+            message: '类别删除成功',
+            affectedProducts: products.length
+        });
+    } catch (error) {
+        console.error('删除类别失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '删除类别失败',
             error: error.message
         });
     }

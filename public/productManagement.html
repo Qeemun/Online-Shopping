@@ -35,6 +35,17 @@
                     <input type="text" id="product-name" required>
                 </div>
                 <div class="form-group">
+                    <label for="product-description">商品描述:</label>
+                    <textarea id="product-description" rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="product-category">商品种类:</label>
+                    <select id="product-category">
+                        <option value="">-- 选择种类 --</option>
+                        <!-- 种类选项将通过JS动态加载 -->
+                    </select>
+                </div>
+                <div class="form-group">
                     <label for="product-price">价格:</label>
                     <input type="number" id="product-price" step="0.01" required>
                 </div>
@@ -61,6 +72,17 @@
                     <input type="text" id="edit-product-name" required>
                 </div>
                 <div class="form-group">
+                    <label for="edit-product-description">商品描述:</label>
+                    <textarea id="edit-product-description" rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="edit-product-category">商品种类:</label>
+                    <select id="edit-product-category">
+                        <option value="">-- 选择种类 --</option>
+                        <!-- 种类选项将通过JS动态加载 -->
+                    </select>
+                </div>
+                <div class="form-group">
                     <label for="edit-product-price">价格:</label>
                     <input type="number" id="edit-product-price" step="0.01" required>
                 </div>
@@ -84,6 +106,7 @@
                 <thead>
                     <tr>
                         <th>产品名称</th>
+                        <th>种类</th>
                         <th>价格</th>
                         <th>库存</th>
                         <th>操作</th>

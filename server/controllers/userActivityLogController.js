@@ -2,6 +2,7 @@ const db = require('../models');
 const User = db.User;
 const UserActivityLog = db.UserActivityLog;
 const Product = db.Product;
+const Op = db.Sequelize.Op;
 
 // 获取所有客户
 exports.getAllCustomers = async (req, res) => {
@@ -156,5 +157,266 @@ exports.getProductActivityStats = async (req, res) => {
     } catch (error) {
         console.error('获取产品活动统计失败:', error);
         res.status(500).json({ success: false, message: '获取产品活动统计失败', error: error.message });
+    }
+};
+
+// 获取销售人员负责商品的用户活动日志
+exports.getSalesProductLogs = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const { 
+            category, 
+            action, 
+            startDate, 
+            endDate, 
+            page = 1, 
+            limit = 20 
+        } = req.query;
+        
+        // 验证是否为销售人员或管理员
+        if (req.user.role !== 'sales' && req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: '无权访问此资源'
+            });
+        }
+        
+        // 查找销售人员负责的产品
+        const SalesProductAssignment = db.sequelize.models.SalesProductAssignment;
+        let productIds = [];
+        
+        // 如果是销售人员，只能查看自己负责的产品
+        if (req.user.role === 'sales') {
+            const assignments = await SalesProductAssignment.findAll({
+                where: { salesId: userId }
+            });
+            
+            if (assignments.length === 0) {
+                return res.status(200).json({
+                    success: true,
+                    logs: [],
+                    pagination: {
+                        total: 0,
+                        page: parseInt(page),
+                        limit: parseInt(limit),
+                        totalPages: 0
+                    }
+                });
+            }
+            
+            productIds = assignments.map(assignment => assignment.productId);
+        }
+        
+        // 构建查询条件
+        const whereCondition = {};
+        
+        // 如果是销售人员，限制只能查看自己负责的产品
+        if (req.user.role === 'sales') {
+            whereCondition.productId = {
+                [Op.in]: productIds
+            };
+        }
+        
+        // 按活动类型筛选
+        if (action) {
+            whereCondition.action = action;
+        }
+        
+        // 按日期范围筛选
+        if (startDate || endDate) {
+            whereCondition.createdAt = {};
+            
+            if (startDate) {
+                whereCondition.createdAt[Op.gte] = new Date(startDate);
+            }
+            
+            if (endDate) {
+                const endDateObj = new Date(endDate);
+                endDateObj.setDate(endDateObj.getDate() + 1); // 包含结束日期当天
+                whereCondition.createdAt[Op.lt] = endDateObj;
+            }
+        }
+        
+        // 按类别筛选（需要联合查询Product表）
+        const includeOptions = [{
+            model: db.User,
+            as: 'user',
+            attributes: ['id', 'username', 'email']
+        }, {
+            model: db.Product,
+            as: 'product',
+            attributes: ['id', 'name', 'category']
+        }];
+        
+        if (category) {
+            includeOptions[1].where = { category };
+        }
+        
+        // 计算分页参数
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+        
+        // 查询总数
+        const total = await UserActivityLog.count({
+            where: whereCondition,
+            include: includeOptions
+        });
+        
+        // 获取日志
+        const logs = await UserActivityLog.findAll({
+            where: whereCondition,
+            include: includeOptions,
+            order: [['createdAt', 'DESC']],
+            limit: parseInt(limit),
+            offset: offset
+        });
+        
+        res.status(200).json({
+            success: true,
+            logs,
+            pagination: {
+                total,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                totalPages: Math.ceil(total / parseInt(limit))
+            }
+        });
+    } catch (error) {
+        console.error('获取销售人员产品活动日志失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '获取活动日志失败',
+            error: error.message
+        });
+    }
+};
+
+// 获取销售人员负责商品的用户活动统计
+exports.getSalesProductStats = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const { category, startDate, endDate } = req.query;
+        
+        // 验证是否为销售人员或管理员
+        if (req.user.role !== 'sales' && req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: '无权访问此资源'
+            });
+        }
+        
+        // 查找销售人员负责的产品
+        const SalesProductAssignment = db.sequelize.models.SalesProductAssignment;
+        let productIds = [];
+        
+        // 如果是销售人员，只能查看自己负责的产品
+        if (req.user.role === 'sales') {
+            const assignments = await SalesProductAssignment.findAll({
+                where: { salesId: userId }
+            });
+            
+            if (assignments.length === 0) {
+                return res.status(200).json({
+                    success: true,
+                    stats: {
+                        viewCount: 0,
+                        purchaseCount: 0,
+                        stayCount: 0,
+                        totalDuration: 0
+                    }
+                });
+            }
+            
+            productIds = assignments.map(assignment => assignment.productId);
+        }
+        
+        // 构建查询条件
+        const whereCondition = {};
+        
+        // 如果是销售人员，限制只能查看自己负责的产品
+        if (req.user.role === 'sales') {
+            whereCondition.productId = {
+                [Op.in]: productIds
+            };
+        }
+        
+        // 按日期范围筛选
+        if (startDate || endDate) {
+            whereCondition.createdAt = {};
+            
+            if (startDate) {
+                whereCondition.createdAt[Op.gte] = new Date(startDate);
+            }
+            
+            if (endDate) {
+                const endDateObj = new Date(endDate);
+                endDateObj.setDate(endDateObj.getDate() + 1); // 包含结束日期当天
+                whereCondition.createdAt[Op.lt] = endDateObj;
+            }
+        }
+        
+        // 按类别筛选（需要联合查询Product表）
+        const includeOptions = [{
+            model: db.Product,
+            as: 'product',
+            attributes: ['id', 'category']
+        }];
+        
+        if (category) {
+            includeOptions[0].where = { category };
+        }
+        
+        // 获取浏览次数
+        const viewCount = await UserActivityLog.count({
+            where: {
+                ...whereCondition,
+                action: 'view'
+            },
+            include: includeOptions
+        });
+        
+        // 获取购买次数
+        const purchaseCount = await UserActivityLog.count({
+            where: {
+                ...whereCondition,
+                action: 'purchase'
+            },
+            include: includeOptions
+        });
+        
+        // 获取停留记录
+        const stayLogs = await UserActivityLog.findAll({
+            where: {
+                ...whereCondition,
+                action: 'stay',
+                durationSeconds: {
+                    [Op.not]: null
+                }
+            },
+            attributes: ['durationSeconds'],
+            include: includeOptions
+        });
+        
+        // 计算总停留时间和停留次数
+        const stayCount = stayLogs.length;
+        const totalDuration = stayLogs.reduce((total, log) => {
+            return total + (log.durationSeconds || 0);
+        }, 0);
+        
+        res.status(200).json({
+            success: true,
+            stats: {
+                viewCount,
+                purchaseCount,
+                stayCount,
+                totalDuration
+            }
+        });
+    } catch (error) {
+        console.error('获取销售人员产品活动统计失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '获取活动统计失败',
+            error: error.message
+        });
     }
 };

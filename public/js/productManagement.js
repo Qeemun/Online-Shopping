@@ -10,6 +10,7 @@ function loadProducts() {
                     const productRow = `
                         <tr>
                             <td>${product.name}</td>
+                            <td>${product.category || '未分类'}</td>
                             <td>${product.price}</td>
                             <td>${product.stock}</td>
                             <td>
@@ -24,12 +25,42 @@ function loadProducts() {
             }
         })
         .catch(error => console.error('加载产品失败', error));
+    
+    // 同时加载商品种类
+    loadCategories();
+}
+
+// 加载商品种类
+function loadCategories() {
+    fetch('http://localhost:3000/products/categories/all')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && Array.isArray(data.categories)) {
+                const addCategorySelect = document.getElementById('product-category');
+                const editCategorySelect = document.getElementById('edit-product-category');
+                
+                // 清空现有选项（保留默认选项）
+                addCategorySelect.innerHTML = '<option value="">-- 选择种类 --</option>';
+                editCategorySelect.innerHTML = '<option value="">-- 选择种类 --</option>';
+                
+                // 添加所有类别
+                data.categories.forEach(category => {
+                    const option = `<option value="${category}">${category}</option>`;
+                    addCategorySelect.innerHTML += option;
+                    editCategorySelect.innerHTML += option;
+                });
+            }
+        })
+        .catch(error => console.error('加载商品类别失败', error));
 }
 
 // 删除产品
 function deleteProduct(productId) {
     fetch(`http://localhost:3000/products/${productId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
     })
         .then(response => response.json())
         .then(data => {
@@ -52,6 +83,19 @@ function showEditProductForm(productId) {
                 const product = data.product;
                 document.getElementById('edit-product-id').value = product.id;
                 document.getElementById('edit-product-name').value = product.name;
+                document.getElementById('edit-product-description').value = product.description || '';
+                
+                const categorySelect = document.getElementById('edit-product-category');
+                if (product.category) {
+                    // 寻找匹配的选项
+                    for (let i = 0; i < categorySelect.options.length; i++) {
+                        if (categorySelect.options[i].value === product.category) {
+                            categorySelect.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+                
                 document.getElementById('edit-product-price').value = product.price;
                 document.getElementById('edit-product-stock').value = product.stock;
                 document.getElementById('edit-image-preview').src = `http://localhost:3000${product.imageUrl}`;
@@ -71,6 +115,8 @@ async function updateProduct(event) {
     const productId = document.getElementById('edit-product-id').value;
     const formData = new FormData();
     formData.append('name', document.getElementById('edit-product-name').value);
+    formData.append('description', document.getElementById('edit-product-description').value);
+    formData.append('category', document.getElementById('edit-product-category').value);
     formData.append('price', document.getElementById('edit-product-price').value);
     formData.append('stock', document.getElementById('edit-product-stock').value);
     
@@ -82,13 +128,16 @@ async function updateProduct(event) {
     try {
         const response = await fetch(`http://localhost:3000/products/${productId}`, {
             method: 'PUT',
-            body: formData //浏览器会自动设置
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: formData //浏览器会自动设置Content-Type
         });
 
         const data = await response.json();
         if (data.success) {
             alert('商品更新成功');
-            document.getElementById('edit-form').reset(); // 确保调用的是表单的 reset 方法
+            document.getElementById('edit-form').reset(); // 重置表单
             document.getElementById('edit-product-form').style.display = 'none';
             loadProducts();
         } else {
@@ -133,6 +182,8 @@ async function addProduct(event) {
 
     const formData = new FormData();
     formData.append('name', document.getElementById('product-name').value);
+    formData.append('description', document.getElementById('product-description').value);
+    formData.append('category', document.getElementById('product-category').value);
     formData.append('price', document.getElementById('product-price').value);
     formData.append('stock', document.getElementById('product-stock').value);
     
@@ -144,6 +195,9 @@ async function addProduct(event) {
     try {
         const response = await fetch('http://localhost:3000/products', {
             method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
             body: formData // 不需要设置 Content-Type，浏览器会自动设置
         });
 

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品类别管理 - 销售管理</title>
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <style>
+        .category-container {
+            display: flex;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        
+        .category-form {
+            flex: 1;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .category-list {
+            flex: 2;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .category-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .category-item:last-child {
+            border-bottom: none;
+        }
+        
+        .category-name {
+            font-weight: 500;
+        }
+        
+        .category-meta {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .category-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .subcategory-container {
+            margin-left: 20px;
+            border-left: 2px solid #eee;
+            padding-left: 15px;
+        }
+        
+        button {
+            cursor: pointer;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            background: var(--primary-color);
+            color: white;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: var(--primary-dark);
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        .btn-danger:hover {
+            background: #bd2130;
+        }
+        
+        .no-categories {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <h1>商品类别管理</h1>
+        <nav>
+            <a href="salesDashboard.html">返回管理面板</a>
+            <a href="index.html">首页</a>
+        </nav>
+    </header>
+
+    <!-- Category Management Section -->
+    <section id="category-management">
+        <h2>管理商品类别</h2>
+        
+        <div class="category-container">
+            <!-- 添加类别表单 -->
+            <div class="category-form">
+                <h3>添加新类别</h3>
+                <form id="add-category-form" onsubmit="addCategory(event)">
+                    <div class="form-group">
+                        <label for="category-name">类别名称:</label>
+                        <input type="text" id="category-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="category-description">类别描述:</label>
+                        <textarea id="category-description" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="parent-category">父类别(可选):</label>
+                        <select id="parent-category">
+                            <option value="">-- 顶级类别 --</option>
+                            <!-- 父类别选项将动态加载 -->
+                        </select>
+                    </div>
+                    <button type="submit">添加类别</button>
+                </form>
+            </div>
+            
+            <!-- 类别列表 -->
+            <div class="category-list">
+                <h3>现有类别</h3>
+                <div id="categories-container">
+                    <p class="loading">加载中...</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 编辑类别模态框 -->
+    <div id="edit-category-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="document.getElementById('edit-category-modal').style.display='none'">&times;</span>
+            <h3>编辑类别</h3>
+            <form id="edit-category-form" onsubmit="updateCategory(event)">
+                <input type="hidden" id="edit-category-id">
+                <div class="form-group">
+                    <label for="edit-category-name">类别名称:</label>
+                    <input type="text" id="edit-category-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-category-description">类别描述:</label>
+                    <textarea id="edit-category-description" rows="3"></textarea>
+                </div>
+                <button type="submit">保存更改</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Product Modal -->
+    <div id="edit-product-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('edit-product-modal')">&times;</span>
+            <h3>编辑商品信息</h3>
+            <form id="edit-product-form" onsubmit="updateProduct(event)">
+                <input type="hidden" id="edit-product-id">
+                <div class="form-group">
+                    <label for="edit-product-name">商品名称:</label>
+                    <input type="text" id="edit-product-name" disabled>
+                </div>
+                <div class="form-group">
+                    <label for="edit-product-price">销售价格:</label>
+                    <input type="number" id="edit-product-price" min="0" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-product-stock">库存数量:</label>
+                    <input type="number" id="edit-product-stock" min="0" required>
+                </div>
+                <button type="submit">更新商品</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2024 牧燕小站</p>
+    </footer>
+
+    <script src="js/categoryManagement.js"></script>
+</body>
+</html>

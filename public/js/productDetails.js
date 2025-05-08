@@ -117,6 +117,20 @@ function displayProductDetails(product) {
     
     const formattedPrice = isNaN(price) ? product.price : price.toFixed(2);
     
+    // 生成库存状态
+    let stockStatus = '';
+    let stockClass = '';
+    if (product.stock > 20) {
+        stockStatus = '有货';
+        stockClass = 'in-stock';
+    } else if (product.stock > 0) {
+        stockStatus = `仅剩 ${product.stock} 件`;
+        stockClass = 'low-stock';
+    } else {
+        stockStatus = '缺货';
+        stockClass = 'out-of-stock';
+    }
+
     productInfo.innerHTML = `
         <div class="product-image">
             <img src="${imageUrl}" alt="${product.name}" onerror="this.src='/images/default-product.png'">
@@ -124,15 +138,23 @@ function displayProductDetails(product) {
         <div class="product-content">
             <h1>${product.name}</h1>
             <p class="price">¥${formattedPrice}</p>
-            <p class="stock">库存: ${product.stock}</p>
-            <p class="category">类别: ${product.category || '未分类'}</p>
+            
+            <div class="product-info-table">
+                <span class="info-label">类别:</span>
+                <span class="info-value">${product.category || '未分类'}</span>
+                
+                <span class="info-label">库存:</span>
+                <span class="info-value ${stockClass}">${stockStatus}</span>
+            </div>
+            
             <div class="description">
                 <h3>商品描述</h3>
                 <p>${product.description || '暂无描述'}</p>
             </div>
+            
             <div class="quantity">
                 <label for="quantity">数量:</label>
-                <input type="number" id="quantity" value="1" min="1" max="${product.stock}">
+                <input type="number" id="quantity" value="1" min="1" max="${product.stock}" ${product.stock <= 0 ? 'disabled' : ''}>
             </div>
         </div>
     `;

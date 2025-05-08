@@ -245,6 +245,10 @@ exports.deleteOrder = async (req, res) => {
             return res.status(404).json({ success: false, message: '订单不存在' });
         }
 
+        // 先删除订单项，再删除订单
+        await OrderItem.destroy({ where: { orderId } });
+        
+        // 然后删除订单本身
         await order.destroy();
 
         res.status(200).json({ success: true, message: '订单删除成功' });

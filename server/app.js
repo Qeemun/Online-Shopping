@@ -11,6 +11,8 @@ const paymentRoutes = require('./routes/paymentRoutes');
 const userActivityRoutes = require('./routes/userActivityRoutes');
 const recommendationRoutes = require('./routes/recommendationRoutes');
 const adminLogRoutes = require('./routes/adminLogRoutes');
+const salesStaffRoutes = require('./routes/salesStaffRoutes');
+const salesReportRoutes = require('./routes/salesReportRoutes');
 const sequelize = require('./config/database');
 const db = require('./models'); // 导入并初始化模型关联
 const rootDir = path.resolve(__dirname, '..'); 
@@ -45,6 +47,8 @@ app.use('/cart', cartRoutes);
 app.use('/pay', paymentRoutes);
 app.use('/user-activity', userActivityRoutes);
 app.use('/recommendations', recommendationRoutes);
+app.use('/sales-staff', salesStaffRoutes);
+app.use('/sales-reports', salesReportRoutes);
 
 // 提供 public 目录中的静态文件
 app.use(express.static(path.join(rootDir, 'public')));

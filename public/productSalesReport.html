@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品销售统计 - 管理面板</title>
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <!-- 引入Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .report-container {
+            margin-bottom: 30px;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .report-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .date-range {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .chart-container {
+            width: 100%;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-card .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1a73e8;
+            margin: 5px 0;
+        }
+        
+        .stat-card .label {
+            color: #555;
+            font-size: 14px;
+        }
+        
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .data-table th, .data-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .data-table th {
+            background: #f1f3f4;
+            font-weight: 500;
+        }
+        
+        .data-table tbody tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .status-good {
+            background: #0f9d58;
+        }
+        
+        .status-warning {
+            background: #f4b400;
+        }
+        
+        .status-danger {
+            background: #db4437;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        
+        .tab.active {
+            border-bottom-color: #1a73e8;
+            color: #1a73e8;
+            font-weight: 500;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <h1>商品销售统计</h1>
+        <nav>
+            <a href="adminDashboard.html">返回管理面板</a>
+            <a href="index.html">首页</a>
+        </nav>
+    </header>
+
+    <!-- 筛选控件 -->
+    <section class="filters">
+        <div class="filter-row">
+            <div class="filter-item">
+                <label for="date-range">日期范围:</label>
+                <select id="date-range" onchange="updateDateRange(this.value)">
+                    <option value="7">最近7天</option>
+                    <option value="30" selected>最近30天</option>
+                    <option value="90">最近3个月</option>
+                    <option value="365">最近1年</option>
+                    <option value="custom">自定义</option>
+                </select>
+            </div>
+            <div class="filter-item" id="custom-date-container" style="display: none;">
+                <label for="start-date">开始日期:</label>
+                <input type="date" id="start-date">
+                <label for="end-date">结束日期:</label>
+                <input type="date" id="end-date">
+                <button onclick="applyCustomDateRange()">应用</button>
+            </div>
+            <div class="filter-item">
+                <label for="category-filter">商品类别:</label>
+                <select id="category-filter" onchange="filterByCategory(this.value)">
+                    <option value="">所有类别</option>
+                    <!-- 类别选项将动态加载 -->
+                </select>
+            </div>
+        </div>
+    </section>
+
+    <!-- 销售概览 -->
+    <section class="report-container">
+        <div class="report-header">
+            <div class="report-title">销售概览</div>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="label">总销售额</div>
+                <div class="value" id="total-revenue">¥0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">总订单数</div>
+                <div class="value" id="total-orders">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">平均订单金额</div>
+                <div class="value" id="avg-order-value">¥0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">总销售数量</div>
+                <div class="value" id="total-quantity">0</div>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="sales-trend-chart"></canvas>
+        </div>
+    </section>
+
+    <!-- 类别销售表现 -->
+    <section class="report-container">
+        <div class="report-header">
+            <div class="report-title">类别销售表现</div>
+        </div>
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('revenue-tab', this)">销售额</div>
+            <div class="tab" onclick="switchTab('orders-tab', this)">订单数</div>
+            <div class="tab" onclick="switchTab('quantity-tab', this)">销售量</div>
+        </div>
+        <div class="tab-content active" id="revenue-tab">
+            <div class="chart-container">
+                <canvas id="category-revenue-chart"></canvas>
+            </div>
+        </div>
+        <div class="tab-content" id="orders-tab">
+            <div class="chart-container">
+                <canvas id="category-orders-chart"></canvas>
+            </div>
+        </div>
+        <div class="tab-content" id="quantity-tab">
+            <div class="chart-container">
+                <canvas id="category-quantity-chart"></canvas>
+            </div>
+        </div>
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>类别</th>
+                        <th>销售额</th>
+                        <th>订单数</th>
+                        <th>销售量</th>
+                        <th>转化率</th>
+                        <th>环比增长</th>
+                    </tr>
+                </thead>
+                <tbody id="category-sales-body">
+                    <!-- 类别销售数据将动态加载 -->
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- 库存状态 -->
+    <section class="report-container">
+        <div class="report-header">
+            <div class="report-title">库存状态</div>
+        </div>
+        <div class="chart-container">
+            <canvas id="inventory-status-chart"></canvas>
+        </div>
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>状态</th>
+                        <th>商品数量</th>
+                        <th>占比</th>
+                        <th>预估价值</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="inventory-status-body">
+                    <!-- 库存状态数据将动态加载 -->
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- 畅销商品 -->
+    <section class="report-container">
+        <div class="report-header">
+            <div class="report-title">畅销商品</div>
+        </div>
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>商品</th>
+                        <th>类别</th>
+                        <th>销售额</th>
+                        <th>销售量</th>
+                        <th>库存状态</th>
+                        <th>负责销售</th>
+                    </tr>
+                </thead>
+                <tbody id="top-products-body">
+                    <!-- 畅销商品数据将动态加载 -->
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2024 牧燕小站</p>
+    </footer>
+
+    <!-- 引入通用工具库 -->
+    <script src="js/salesUtils.js"></script>
+    <script src="js/productSalesReport.js"></script>
+</body>
+</html>
