@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>操作日志 - 在线购物平台</title>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/unified-dashboard.css">
+    <link rel="stylesheet" href="css/operationLogs.css">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <a href="index.html">在线购物平台</a>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="index.html">首页</a></li>
+                <li id="cart-link" style="display: none;"><a href="cart.html">购物车</a></li>
+                <li id="order-history-link" style="display: none;"><a href="orderHistory.html">订单历史</a></li>
+                <li id="admin-link" style="display: none;"><a href="dashboard.html">管理面板</a></li>
+                <li id="login-link"><a href="login.html">登录</a></li>
+                <li id="register-link"><a href="register.html">注册</a></li>
+                <li id="username" class="username"></li>
+                <li><button id="logout-button" style="display: none;">退出</button></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <h3>管理系统</h3>
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html"><span class="icon">📊</span> 控制面板</a></li>
+                <li><a href="productSalesMonitor.html"><span class="icon">📈</span> 销售监控</a></li>
+                <li><a href="salesProductLog.html"><span class="icon">📋</span> 产品日志</a></li>
+                <li id="sales-staff-mgmt" style="display: none;"><a href="salesStaffManagement.html"><span class="icon">👥</span> 销售人员管理</a></li>
+                <li id="product-cat-mgmt" style="display: none;"><a href="productCategoryManagement.html"><span class="icon">🗂️</span> 商品类别管理</a></li>
+                <li id="order-mgmt" style="display: none;"><a href="orderManagement.html"><span class="icon">📦</span> 订单管理</a></li>
+                <li id="customer-mgmt" style="display: none;"><a href="customerManagement.html"><span class="icon">👤</span> 客户管理</a></li>
+                <li id="reports-link" style="display: none;"><a href="reports.html"><span class="icon">📝</span> 销售报表</a></li>
+                <li class="active"><a href="operationLogs.html"><span class="icon">🔍</span> 操作日志</a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <p>&copy; 2025 在线购物平台</p>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1>系统操作日志</h1>
+                <p class="breadcrumb">首页 / 管理系统 / 操作日志</p>
+            </div>
+
+            <div class="content-wrapper">
+                <div class="filter-panel">
+                    <div class="filter-header">
+                        <h2>过滤条件</h2>
+                        <button id="toggle-filters" class="toggle-btn">▼</button>
+                    </div>
+                    <div id="filter-content" class="filter-content">
+                        <form id="log-filter-form">
+                            <div class="filter-row">
+                                <div class="filter-item">
+                                    <label for="log-type">日志类型</label>
+                                    <select id="log-type" name="log-type">
+                                        <option value="all" selected>全部日志</option>
+                                        <option value="login">登录日志</option>
+                                        <option value="admin">管理操作</option>
+                                    </select>
+                                </div>
+                                <div class="filter-item">
+                                    <label for="user-role">用户角色</label>
+                                    <select id="user-role" name="user-role">
+                                        <option value="all" selected>全部角色</option>
+                                        <option value="admin">管理员</option>
+                                        <option value="sales">销售人员</option>
+                                        <option value="customer">客户</option>
+                                    </select>
+                                </div>
+                                <div class="filter-item date-range">
+                                    <label>日期范围</label>
+                                    <div class="date-inputs">
+                                        <input type="date" id="start-date" name="start-date">
+                                        <span>至</span>
+                                        <input type="date" id="end-date" name="end-date">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="filter-row">
+                                <div class="filter-item">
+                                    <label for="log-action">操作类型</label>
+                                    <select id="log-action" name="log-action">
+                                        <option value="all" selected>全部操作</option>
+                                        <option value="login">登录</option>
+                                        <option value="logout">注销</option>
+                                        <option value="create">创建</option>
+                                        <option value="update">更新</option>
+                                        <option value="delete">删除</option>
+                                    </select>
+                                </div>
+                                <div class="filter-item">
+                                    <label for="user-id">用户ID</label>
+                                    <input type="text" id="user-id" name="user-id" placeholder="输入用户ID">
+                                </div>
+                                <div class="filter-actions">
+                                    <button type="submit" class="primary-btn">搜索</button>
+                                    <button type="reset" class="secondary-btn">重置</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="tabs-container">
+                    <div class="tabs">
+                        <div class="tab active" data-tab="login-logs">登录日志</div>
+                        <div class="tab" data-tab="admin-logs">管理操作日志</div>
+                    </div>
+                    
+                    <div class="tab-content active" id="login-logs">
+                        <div class="logs-container">
+                            <h3>用户登录/注销记录</h3>
+                            <div class="logs-stats">
+                                <div class="stat-card">
+                                    <div class="stat-value" id="total-logins">0</div>
+                                    <div class="stat-label">总登录次数</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="total-logouts">0</div>
+                                    <div class="stat-label">总注销次数</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="unique-users-login">0</div>
+                                    <div class="stat-label">独立用户数</div>
+                                </div>
+                            </div>
+                            <div class="table-container">
+                                <table class="data-table" id="login-logs-table">
+                                    <thead>
+                                        <tr>
+                                            <th>用户ID</th>
+                                            <th>用户名</th>
+                                            <th>角色</th>
+                                            <th>操作</th>
+                                            <th>时间</th>
+                                            <th>IP地址</th>
+                                            <th>用户代理</th>
+                                            <th>会话ID</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- 登录日志将通过JS动态加载 -->
+                                    </tbody>
+                                </table>
+                                <div class="loading-indicator" id="login-logs-loading">加载中...</div>
+                                <div class="empty-message" id="login-logs-empty">没有符合条件的登录记录</div>
+                            </div>
+                            <div class="pagination" id="login-logs-pagination">
+                                <!-- 分页控件将通过JS动态加载 -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-content" id="admin-logs">
+                        <div class="logs-container">
+                            <h3>管理操作记录</h3>
+                            <div class="logs-stats">
+                                <div class="stat-card">
+                                    <div class="stat-value" id="total-admin-actions">0</div>
+                                    <div class="stat-label">总操作次数</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="unique-admins">0</div>
+                                    <div class="stat-label">操作人员数</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="success-rate">0%</div>
+                                    <div class="stat-label">成功率</div>
+                                </div>
+                            </div>
+                            <div class="table-container">
+                                <table class="data-table" id="admin-logs-table">
+                                    <thead>
+                                        <tr>
+                                            <th>账户ID</th>
+                                            <th>用户名</th>
+                                            <th>角色</th>
+                                            <th>操作</th>
+                                            <th>模块</th>
+                                            <th>状态</th>
+                                            <th>时间</th>
+                                            <th>IP地址</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- 管理操作日志将通过JS动态加载 -->
+                                    </tbody>
+                                </table>
+                                <div class="loading-indicator" id="admin-logs-loading">加载中...</div>
+                                <div class="empty-message" id="admin-logs-empty">没有符合条件的操作记录</div>
+                            </div>
+                            <div class="pagination" id="admin-logs-pagination">
+                                <!-- 分页控件将通过JS动态加载 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <footer class="main-footer">
+        <p>&copy; 2025 在线购物平台 | 所有权利保留</p>
+    </footer>
+
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/salesUtils.js"></script>
+    <script src="js/operationLogs.js"></script>
+</body>
+</html>

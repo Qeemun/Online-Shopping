@@ -7,7 +7,7 @@ module.exports = (sequelize, DataTypes) => {
       // 关联用户表
       ActivityLog.belongsTo(models.User, {
         foreignKey: 'userId',
-        as: 'user'
+        as: 'users'
       });
     }
   }

@@ -4,7 +4,7 @@ const Order = db.Order;
 const OrderItem = db.OrderItem;
 const User = db.User;
 const SalesProductAssignment = db.sequelize.models.SalesProductAssignment;
-const UserActivityLog = db.UserActivityLog;
+const ActivityLog = db.ActivityLog;
 const { Op, Sequelize } = db.Sequelize;
 
 // 获取总销售额
@@ -667,10 +667,10 @@ exports.getCategorySales = async (req, res) => {
         }
         
         // 获取类别的页面浏览数据（用于计算转化率）
-        const viewCounts = await UserActivityLog.findAll({
+        const viewCounts = await ActivityLog.findAll({
             attributes: [
                 [Sequelize.col('product.category'), 'category'],
-                [Sequelize.fn('COUNT', Sequelize.col('UserActivityLog.id')), 'count']
+                [Sequelize.fn('COUNT', Sequelize.col('ActivityLog.id')), 'count']
             ],
             where: {
                 action: 'view',

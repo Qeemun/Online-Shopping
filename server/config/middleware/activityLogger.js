@@ -28,17 +28,21 @@ const activityLogger = (req, res, next) => {
       const userId = req.user ? req.user.id : null;
       const role = req.user ? req.user.role : null;
       
-      // 如果没有用户信息，并且不是登录/注册请求，则跳过
-      if (!userId && 
-          !req.path.includes('/login') && 
-          !req.path.includes('/register')) {
+      // 登录/注册请求特殊处理 - 不记录ActivityLog（因为此时还没有userId）
+      if (req.path.includes('/login') || req.path.includes('/register')) {
+        // 这些请求通过专门的LoginLog记录，不在这里处理
+        return;
+      }
+      
+      // 如果没有用户信息，跳过ActivityLog记录
+      if (!userId) {
         return;
       }
       
       // 创建日志记录
       const db = require('../../models');
       db.ActivityLog.create({
-        userId: userId , 
+        userId: userId, 
         role: role,
         action: req.method,
         module: req.path.split('/')[1] || 'api',

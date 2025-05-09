@@ -1,7 +1,7 @@
 const db = require('../../models');
-const UserActivityLog = db.UserActivityLog;
-const AdminActionLog = db.AdminActionLog;
-const UserSessionLog = db.UserSessionLog;
+const ActivityLog = db.ActivityLog;
+const LoginLog = db.LoginLog;
+const productviewlogs = db.productviewlogs;
 
 // 记录用户活动
 exports.logUserActivity = async (req, res, next) => {
@@ -38,7 +38,7 @@ exports.logUserActivity = async (req, res, next) => {
         }
 
         // 创建活动日志
-        await UserActivityLog.create({
+        await ActivityLog.create({
             userId: req.user.id,
             productId,
             action,
@@ -52,46 +52,6 @@ exports.logUserActivity = async (req, res, next) => {
     }
 };
 
-// 记录管理员操作
-exports.logAdminAction = async (req, res, next) => {
-    try {
-        // 只记录管理员和销售人员的操作
-        if (!req.user || !['admin', 'sales'].includes(req.user.role)) {
-            return next();
-        }
-
-        const log = {
-            accountId: req.user.id,
-            role: req.user.role,
-            action: req.method === 'GET' ? `查看${req.originalUrl}` : req.body.action || `操作${req.originalUrl}`,
-            path: req.originalUrl,
-            method: req.method,
-            ipAddress: req.ip || req.connection.remoteAddress
-        };
-
-        await AdminActionLog.create(log);
-        next();
-    } catch (error) {
-        console.error('记录管理员操作失败:', error);
-        next(); // 即使日志记录失败，也继续执行请求
-    }
-};
-
-// 记录用户会话
-exports.logUserSession = async (req, user, action) => {
-    try {
-        if (!user || !user.id) return;
-
-        await UserSessionLog.create({
-            userId: user.id,
-            action, // 'login' 或 'logout'
-            ipAddress: req.ip || req.connection.remoteAddress
-        });
-    } catch (error) {
-        console.error('记录用户会话失败:', error);
-        // 继续流程，不中断登录/登出操作
-    }
-};
 
 // 记录停留时间（通过前端心跳实现）
 exports.logStayDuration = async (req, res) => {
@@ -105,7 +65,7 @@ exports.logStayDuration = async (req, res) => {
             });
         }
         
-        await UserActivityLog.create({
+        await ActivityLog.create({
             userId,
             productId,
             action: 'stay',

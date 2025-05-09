@@ -1,3 +1,8 @@
+/**
+ * 产品销售监控页面脚本
+ * 实现销售人员查看所负责商品类别的销售状态信息
+ */
+
 // 全局变量
 let currentProductId = null;
 let currentStaffId = null;
@@ -9,7 +14,6 @@ let charts = {
     categoryStockChart: null,
     salesTrendChart: null
 };
-let categoryCharts = {};
 
 // 分页状态
 let pagination = {
@@ -19,11 +23,13 @@ let pagination = {
 };
 // 加载状态
 let isLoading = false;
+// 创建salesUtils实例
+const salesUtils = new SalesUtils();
 
 // 页面加载完成后执行
 document.addEventListener('DOMContentLoaded', () => {
-    // 检查权限
-    if (!checkAuth()) return;
+    // 使用salesUtils工具类检查权限
+    if (!salesUtils.checkAuthAndPermission(['sales', 'admin'])) return;
     
     // 初始化图表
     initializeCharts();
@@ -47,6 +53,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 添加事件监听器
     addEventListeners();
+    
+    // 初始化类别筛选器
+    loadCategories();
+    
+    // 初始加载实时监控数据
+    loadProducts();
 });
 
 // 显示特定视图并隐藏其他视图
@@ -83,6 +95,25 @@ function addEventListeners() {
     if (document.getElementById('status-filter')) {
         document.getElementById('status-filter').addEventListener('change', filterProducts);
     }
+    
+    // 绑定销售人员选择器事件(仅管理员可见)
+    const salesStaffSelector = document.getElementById('sales-staff-selector');
+    if (salesStaffSelector) {
+        salesStaffSelector.addEventListener('change', function() {
+            const selectedStaffId = this.value;
+            
+            if (selectedStaffId) {
+                // 查看特定销售人员
+                window.location.href = `productSalesMonitor.html?staffId=${selectedStaffId}`;
+            } else {
+                // 查看所有
+                window.location.href = 'productSalesMonitor.html';
+            }
+        });
+    }
+    
+    // 绑定滚动事件，实现无限滚动加载
+    window.addEventListener('scroll', handleScroll);
 }
 
 // 基于当前状态重新加载数据
@@ -92,46 +123,38 @@ function reloadData() {
     } else {
         loadCategorySalesPerformance();
     }
-}
-
-// 检查用户是否已登录且为销售人员
-function checkAuth() {
-    const token = localStorage.getItem('token');
-    const userStr = localStorage.getItem('user');
     
-    if (!token || !userStr) {
-        alert('请先登录');
-        window.location.href = 'login.html';
-        return false;
-    }
+    // 重置产品分页和加载状态
+    pagination = {
+        page: 1,
+        limit: 20,
+        hasMore: true
+    };
+    isLoading = false;
     
-    const user = JSON.parse(userStr);
-    
-    // 检查用户是否为销售人员
-    if (user.role !== 'sales' && user.role !== 'seller' && user.role !== 'salesStaff' && user.role !== 'admin') {
-        alert('您无权访问此页面');
-        window.location.href = 'index.html';
-        return false;
-    }
-    
-    // 设置用户名
-    document.getElementById('current-user').textContent = user.username;
-    
-    // 如果是管理员，显示所有销售人员选择器
-    if (user.role === 'admin') {
-        document.getElementById('sales-staff-selector-container').style.display = 'block';
-        loadSalesStaffOptions();
-    } else {
-        document.getElementById('sales-staff-selector-container').style.display = 'none';
-    }
-    
-    return true;
+    // 重新加载产品列表
+    loadProducts();
 }
 
 // 加载所有类别
 async function loadCategories() {
     try {
-        const response = await fetch('http://localhost:3000/api/products/categories/all');
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (!token || !user) return;
+        
+        let url = 'http://localhost:3000/api/products/categories/all';
+        
+        // 如果是销售人员，只加载其负责的类别
+        if (user.role === 'sales') {
+            url = `http://localhost:3000/api/sales/assigned-categories/${user.id}`;
+        }
+        
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
         
         if (!response.ok) {
             throw new Error('获取商品类别失败');
@@ -145,7 +168,13 @@ async function loadCategories() {
         
         // 填充类别筛选器
         const categoryFilter = document.getElementById('category-filter');
-        data.categories.forEach(category => {
+        if (!categoryFilter) return;
+        
+        // 清空现有选项(保留"所有类别"选项)
+        categoryFilter.innerHTML = '<option value="">所有类别</option>';
+        
+        const categories = data.categories || [];
+        categories.forEach(category => {
             const option = document.createElement('option');
             option.value = category;
             option.textContent = category;
@@ -153,7 +182,7 @@ async function loadCategories() {
         });
     } catch (error) {
         console.error('加载类别失败:', error);
-        showNotification('加载商品类别失败', 'error');
+        salesUtils.showNotification('加载商品类别失败: ' + error.message, 'error');
     }
 }
 
@@ -175,8 +204,6 @@ function handleScroll() {
 // 加载所有商品 (初始加载)
 async function loadProducts() {
     try {
-        if (!checkAuth()) return;
-        
         // 重置分页
         pagination = {
             page: 1,
@@ -202,7 +229,7 @@ async function loadProducts() {
                 <td colspan="6" style="text-align: center;">加载商品数据失败: ${error.message}</td>
             </tr>
         `;
-        showNotification('加载商品失败: ' + error.message, 'error');
+        salesUtils.showNotification('加载商品失败: ' + error.message, 'error');
     }
 }
 
@@ -214,6 +241,8 @@ async function loadMoreProducts(isInitialLoad = false) {
     
     try {
         const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (!token || !user) return;
         
         // 显示加载指示器
         if (!isInitialLoad) {
@@ -232,8 +261,20 @@ async function loadMoreProducts(isInitialLoad = false) {
             params.append('category', categoryFilter);
         }
         
+        // 添加状态筛选条件
+        const statusFilter = document.getElementById('status-filter').value;
+        if (statusFilter) {
+            params.append('stockStatus', statusFilter);
+        }
+        
+        // 如果是销售人员，只查询其负责的商品
+        let url = 'http://localhost:3000/api/products';
+        if (user.role === 'sales') {
+            url = `http://localhost:3000/api/sales/${user.id}/products`;
+        }
+        
         // 发送请求
-        const response = await fetch(`http://localhost:3000/api/products?${params}`, {
+        const response = await fetch(`${url}?${params}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -263,7 +304,7 @@ async function loadMoreProducts(isInitialLoad = false) {
             pagination = {
                 page: pagination.page + 1,
                 limit: pagination.limit,
-                hasMore: data.pagination.hasMore
+                hasMore: data.pagination.page < data.pagination.totalPages
             };
         } else {
             pagination.hasMore = false;
@@ -271,16 +312,16 @@ async function loadMoreProducts(isInitialLoad = false) {
         
         // 保存所有商品数据
         if (isInitialLoad) {
-            window.allProducts = data.products;
+            window.allProducts = data.products || [];
         } else {
-            window.allProducts = [...(window.allProducts || []), ...data.products];
+            window.allProducts = [...(window.allProducts || []), ...(data.products || [])];
         }
         
         // 显示商品数据
-        displayProducts(data.products, isInitialLoad);
+        displayProducts(data.products || [], isInitialLoad);
         
         // 仅在初次加载时渲染图表
-        if (isInitialLoad) {
+        if (isInitialLoad && window.allProducts && window.allProducts.length > 0) {
             renderSalesChart(window.allProducts);
         }
         
@@ -291,7 +332,7 @@ async function loadMoreProducts(isInitialLoad = false) {
         
     } catch (error) {
         console.error('加载更多商品失败:', error);
-        showNotification('加载更多商品失败: ' + error.message, 'error');
+        salesUtils.showNotification('加载更多商品失败: ' + error.message, 'error');
     } finally {
         isLoading = false;
     }
@@ -370,6 +411,11 @@ function displayProducts(products, isInitialLoad = false) {
             <td class="status ${statusClass}">${stockStatus}</td>
             <td>${lastSale}</td>
         `;
+        
+        // 添加行点击事件，查看商品详情
+        row.addEventListener('click', () => {
+            window.location.href = `productDetails.html?id=${product.id}`;
+        });
         
         fragment.appendChild(row);
     });
@@ -536,41 +582,10 @@ function renderSalesChart(products) {
     });
 }
 
-// 显示通知
-function showNotification(message, type = 'info') {
-    // 如果页面上没有通知容器，则创建一个
-    let notificationContainer = document.getElementById('notification-container');
-    
-    if (!notificationContainer) {
-        notificationContainer = document.createElement('div');
-        notificationContainer.id = 'notification-container';
-        document.body.appendChild(notificationContainer);
-    }
-    
-    // 创建通知元素
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.textContent = message;
-    
-    // 添加到容器
-    notificationContainer.appendChild(notification);
-    
-    // 3秒后移除通知
-    setTimeout(() => {
-        notification.style.opacity = '0';
-        setTimeout(() => {
-            notification.remove();
-        }, 500);
-    }, 3000);
-}
-
-// 格式化日期时间
+// 格式化日期时间 - 使用salesUtils中的方法
 function formatDateTime(dateString) {
     if (!dateString) return '未知';
-    
-    const date = new Date(dateString);
-    
-    return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+    return salesUtils.formatDateTime(dateString);
 }
 
 // 初始化日期选择器
@@ -742,7 +757,7 @@ function initChart(canvasId, type, title, yAxisLabel, formatYAxis = false, forma
 function loadSalesStaffOptions() {
     const token = localStorage.getItem('token');
     
-    fetch('/sales-staff', {
+    fetch('http://localhost:3000/api/sales-staff', {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`,
@@ -767,129 +782,165 @@ function loadSalesStaffOptions() {
                 option.textContent = staff.username;
                 selector.appendChild(option);
             });
-            
-            // 添加选择事件
-            selector.addEventListener('change', function() {
-                const selectedStaffId = this.value;
-                
-                if (selectedStaffId) {
-                    // 查看特定销售人员
-                    window.location.href = `productSalesMonitor.html?staffId=${selectedStaffId}`;
-                } else {
-                    // 查看所有
-                    window.location.href = 'productSalesMonitor.html';
-                }
-            });
         } else {
             console.error('加载销售人员失败:', data.message);
-            showNotification('加载销售人员失败', 'error');
+            salesUtils.showNotification('加载销售人员失败', 'error');
         }
     })
     .catch(error => {
         console.error('加载销售人员失败:', error);
-        showNotification('加载销售人员失败', 'error');
+        salesUtils.showNotification('加载销售人员失败', 'error');
     });
 }
 
-// 加载类别销售业绩（通用函数）
-function loadPerformanceData(url, staffId = null) {
+// 加载类别销售业绩数据
+async function loadCategorySalesPerformance() {
     showLoadingOverlay();
     
     const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!token || !user) return;
+    
     const startDate = document.getElementById('start-date').value;
     const endDate = document.getElementById('end-date').value;
     
-    // 构建请求URL
-    let apiUrl = url;
-    if (startDate && endDate) {
-        apiUrl += (apiUrl.includes('?') ? '&' : '?') + `startDate=${startDate}&endDate=${endDate}`;
-    }
-    
-    // 创建promise数组
-    const promises = [];
-    
-    // 如果是加载特定销售人员数据，先获取销售人员信息
-    if (staffId) {
-        promises.push(
-            fetch(`/sales-staff/${staffId}`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(staffData => {
-                if (staffData.success) {
-                    // 设置销售人员名称
-                    document.getElementById('staff-name').textContent = staffData.salesStaff.username;
-                    return true;
-                } else {
-                    throw new Error(staffData.message || '获取销售人员信息失败');
-                }
-            })
-        );
-    }
-    
-    // 添加获取业绩数据的请求
-    promises.push(
-        fetch(apiUrl, {
-            method: 'GET',
+    try {
+        // 构建请求URL
+        let apiUrl = 'http://localhost:3000/api/sales/categories/performance';
+        const params = new URLSearchParams();
+        
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        
+        // 如果是销售人员，只查询其负责的类别
+        if (user.role === 'sales') {
+            params.append('salesId', user.id);
+        }
+        
+        const queryString = params.toString();
+        if (queryString) {
+            apiUrl += `?${queryString}`;
+        }
+        
+        const response = await fetch(apiUrl, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             }
-        })
-        .then(response => response.json())
-    );
-    
-    // 处理所有请求
-    Promise.all(promises)
-        .then(results => {
-            // 最后一个结果是业绩数据
-            const data = results[results.length - 1];
-            
-            hideLoadingOverlay();
-            
-            if (data.success) {
-                // 显示类别销售业绩数据
-                displayCategoryPerformance(data.categoryPerformance);
-                
-                // 显示时间序列销售趋势
-                if (data.salesTrend) {
-                    displaySalesTrend(data.salesTrend);
-                }
-                
-                // 显示库存状态
-                if (data.stockStatus) {
-                    displayStockStatus(data.stockStatus);
-                }
-            } else {
-                console.error('加载销售业绩数据失败:', data.message);
-                showNotification('加载销售业绩失败: ' + data.message, 'error');
-            }
-        })
-        .catch(error => {
-            hideLoadingOverlay();
-            console.error('加载销售业绩数据失败:', error);
-            showNotification('加载销售业绩失败', 'error');
         });
-}
-
-// 加载所有类别的销售业绩
-function loadCategorySalesPerformance() {
-    loadPerformanceData('/categories/performance');
+        
+        if (!response.ok) {
+            throw new Error('获取类别销售业绩失败');
+        }
+        
+        const data = await response.json();
+        hideLoadingOverlay();
+        
+        if (data.success) {
+            // 显示类别销售业绩数据
+            displayCategoryPerformance(data.categoryPerformance);
+            
+            // 显示时间序列销售趋势
+            if (data.salesTrend) {
+                displaySalesTrend(data.salesTrend);
+            }
+            
+            // 显示库存状态
+            if (data.stockStatus) {
+                displayStockStatus(data.stockStatus);
+            }
+        } else {
+            throw new Error(data.message || '获取类别销售业绩失败');
+        }
+    } catch (error) {
+        hideLoadingOverlay();
+        console.error('加载类别销售业绩失败:', error);
+        salesUtils.showNotification('加载类别销售业绩失败: ' + error.message, 'error');
+    }
 }
 
 // 加载特定销售人员的类别销售业绩
-function loadSalesStaffCategoryPerformance(staffId) {
-    loadPerformanceData(`/sales-staff/${staffId}/category-performance`, staffId);
+async function loadSalesStaffCategoryPerformance(staffId) {
+    if (!staffId) return;
+    
+    showLoadingOverlay();
+    
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    const startDate = document.getElementById('start-date').value;
+    const endDate = document.getElementById('end-date').value;
+    
+    try {
+        // 获取销售人员信息
+        const staffResponse = await fetch(`http://localhost:3000/api/sales-staff/${staffId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!staffResponse.ok) {
+            throw new Error('获取销售人员信息失败');
+        }
+        
+        const staffData = await staffResponse.json();
+        
+        if (staffData.success) {
+            // 设置销售人员名称
+            document.getElementById('staff-name').textContent = staffData.salesStaff.username;
+        } else {
+            throw new Error(staffData.message || '获取销售人员信息失败');
+        }
+        
+        // 构建业绩数据请求URL
+        let apiUrl = `http://localhost:3000/api/sales-staff/${staffId}/category-performance`;
+        const params = new URLSearchParams();
+        
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        
+        const queryString = params.toString();
+        if (queryString) {
+            apiUrl += `?${queryString}`;
+        }
+        
+        const response = await fetch(apiUrl, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('获取销售人员类别业绩失败');
+        }
+        
+        const data = await response.json();
+        hideLoadingOverlay();
+        
+        if (data.success) {
+            // 显示类别销售业绩数据
+            displayCategoryPerformance(data.categoryPerformance, true);
+            
+            // 显示时间序列销售趋势
+            if (data.salesTrend) {
+                displaySalesTrend(data.salesTrend, true);
+            }
+        } else {
+            throw new Error(data.message || '获取销售人员类别业绩失败');
+        }
+    } catch (error) {
+        hideLoadingOverlay();
+        console.error('加载销售人员类别业绩失败:', error);
+        salesUtils.showNotification('加载销售人员类别业绩失败: ' + error.message, 'error');
+    }
 }
 
 // 显示类别业绩数据
-function displayCategoryPerformance(categoryData) {
+function displayCategoryPerformance(categoryData, isStaffView = false) {
     // 确定使用哪个表格和图表
-    const tableId = currentStaffId ? 'staff-category-performance-body' : 'category-performance-body';
+    const tableId = isStaffView ? 'staff-category-performance-body' : 'category-performance-body';
     const tableBody = document.getElementById(tableId);
     
     // 如果表格不存在，则使用默认表格
@@ -901,7 +952,7 @@ function displayCategoryPerformance(categoryData) {
         targetTableBody.innerHTML = '<tr><td colspan="6" class="text-center">暂无数据</td></tr>';
         
         // 清空图表
-        updateCategoryCharts([], [], []);
+        updateCategoryCharts([], [], [], [], isStaffView);
         return;
     }
     
@@ -941,15 +992,16 @@ function displayCategoryPerformance(categoryData) {
     });
     
     // 更新图表
-    updateCategoryCharts(categories, revenues, quantities, stocks);
+    updateCategoryCharts(categories, revenues, quantities, stocks, isStaffView);
 }
 
 // 更新类别相关的图表
-function updateCategoryCharts(categories, revenues, quantities, stocks = []) {
+function updateCategoryCharts(categories, revenues, quantities, stocks = [], isStaffView = false) {
     // 确定使用哪套图表
-    const revenueChartId = currentStaffId ? 'categoryrevenuechart-staffChart' : 'categoryrevenuechartChart';
-    const quantityChartId = currentStaffId ? 'categoryquantitychart-staffChart' : 'categoryquantitychartChart';
+    const revenueChartId = isStaffView ? 'categoryrevenuechart-staffChart' : 'categoryrevenuechartChart';
+    const quantityChartId = isStaffView ? 'categoryquantitychart-staffChart' : 'categoryquantitychartChart';
     const stockChartId = 'categorystockchartChart';
+    const trendChartId = isStaffView ? 'salestrendchart-staffChart' : 'salestrendchartChart';
     
     // 更新销售额图表
     if (charts[revenueChartId]) {
@@ -966,7 +1018,7 @@ function updateCategoryCharts(categories, revenues, quantities, stocks = []) {
     }
     
     // 更新库存图表（如果有数据）
-    if (charts[stockChartId] && stocks.length > 0) {
+    if (!isStaffView && charts[stockChartId] && stocks.length > 0) {
         charts[stockChartId].data.labels = categories;
         charts[stockChartId].data.datasets[0].data = stocks;
         charts[stockChartId].update();
@@ -974,9 +1026,9 @@ function updateCategoryCharts(categories, revenues, quantities, stocks = []) {
 }
 
 // 显示销售趋势
-function displaySalesTrend(salesTrend) {
+function displaySalesTrend(salesTrend, isStaffView = false) {
     // 确定使用哪个趋势图表
-    const trendChartId = currentStaffId ? 'salestrendchart-staffChart' : 'salestrendchartChart';
+    const trendChartId = isStaffView ? 'salestrendchart-staffChart' : 'salestrendchartChart';
     const trendChart = charts[trendChartId];
     
     if (!trendChart) return;

@@ -1,7 +1,7 @@
 'use strict';
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('userActivityLogs', {
+    await queryInterface.createTable('ActivityLogs', {
       id: {
         allowNull: false,
         autoIncrement: true,
@@ -39,10 +39,10 @@ module.exports = {
     });
     
     // 添加外键约束
-    await queryInterface.addConstraint('userActivityLogs', {
+    await queryInterface.addConstraint('ActivityLogs', {
       fields: ['userId'],
       type: 'foreign key',
-      name: 'fk_userActivityLogs_userId',
+      name: 'fk_ActivityLogs_userId',
       references: {
         table: 'users',
         field: 'id'
@@ -51,10 +51,10 @@ module.exports = {
       onUpdate: 'CASCADE'
     });
     
-    await queryInterface.addConstraint('userActivityLogs', {
+    await queryInterface.addConstraint('ActivityLogs', {
       fields: ['productId'],
       type: 'foreign key',
-      name: 'fk_userActivityLogs_productId',
+      name: 'fk_ActivityLogs_productId',
       references: {
         table: 'products',
         field: 'id'
@@ -64,6 +64,6 @@ module.exports = {
     });
   },
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('userActivityLogs');
+    await queryInterface.dropTable('ActivityLogs');
   }
 };

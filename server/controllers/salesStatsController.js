@@ -7,6 +7,94 @@ const { Op } = require('sequelize');
  */
 class SalesStatsController {
   /**
+   * 为销售人员生成摘要数据
+   * @param {number} salesId - 销售人员ID
+   * @param {Date} todayStart - 今天的开始时间
+   * @param {Date} monthStart - 本月的开始时间
+   * @return {Object} 销售人员摘要数据
+   */
+  async generateSalesSummary(salesId, todayStart, monthStart) {
+    try {
+      // 获取销售人员负责的产品
+      const assignments = await db.SalesProductAssignment.findAll({
+        where: { salesId }
+      });
+      
+      const productIds = assignments.map(a => a.productId);
+      
+      // 如果没有分配产品，返回零值摘要
+      if (productIds.length === 0) {
+        return {
+          todayRevenue: 0,
+          monthRevenue: 0,
+          productCount: 0,
+          pendingOrders: 0
+        };
+      }
+      
+      // 获取今日销售额
+      const todayOrders = await db.OrderItem.findAll({
+        where: {
+          productId: { [Op.in]: productIds },
+          createdAt: { [Op.gte]: todayStart }
+        },
+        include: [{
+          model: db.Order,
+          as: 'order',
+          where: { status: 'completed' }
+        }]
+      });
+      
+      // 获取本月销售额
+      const monthOrders = await db.OrderItem.findAll({
+        where: {
+          productId: { [Op.in]: productIds },
+          createdAt: { [Op.gte]: monthStart }
+        },
+        include: [{
+          model: db.Order,
+          as: 'order',
+          where: { status: 'completed' }
+        }]
+      });
+      
+      // 获取待处理订单数量
+      const pendingOrders = await db.OrderItem.count({
+        where: {
+          productId: { [Op.in]: productIds }
+        },
+        include: [{
+          model: db.Order,
+          as: 'order',
+          where: { status: 'pending' }
+        }],
+        distinct: true,
+        col: 'orderId'
+      });
+      
+      // 计算今日销售额
+      const todayRevenue = todayOrders.reduce((sum, item) => {
+        return sum + (parseFloat(item.price) * item.quantity);
+      }, 0);
+      
+      // 计算本月销售额
+      const monthRevenue = monthOrders.reduce((sum, item) => {
+        return sum + (parseFloat(item.price) * item.quantity);
+      }, 0);
+      
+      return {
+        todayRevenue,
+        monthRevenue,
+        productCount: productIds.length,
+        pendingOrders
+      };
+    } catch (error) {
+      console.error('生成销售摘要数据失败:', error);
+      throw error;
+    }
+  }
+
+  /**
    * 获取特定商品类别的销售状态
    * @param {Object} req - 请求对象
    * @param {Object} res - 响应对象

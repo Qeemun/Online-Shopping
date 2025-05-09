@@ -19,6 +19,33 @@ router.get('/my-products', salesAuth, async (req, res) => {
   }, res);
 });
 
+// 获取销售人员摘要数据
+router.get('/my-summary', salesAuth, async (req, res) => {
+  try {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+    
+    // 调用销售人员详情API获取基础数据
+    const salesData = await salesStatsController.generateSalesSummary(req.user.id, todayStart, monthStart);
+    
+    res.json({
+      success: true,
+      summary: salesData
+    });
+  } catch (error) {
+    console.error('获取销售摘要数据失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取销售摘要数据失败',
+      error: error.message
+    });
+  }
+});
+
 /**
  * 销售统计和监控路由
  */
