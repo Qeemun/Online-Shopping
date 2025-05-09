@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
+const userActivityController = require('../controllers/userActivityController');
+const authenticate = require('../config/middleware/authenticate'); // 导入认证中间件
 
 // 注册路由
 router.post('/register', (req, res) => {
@@ -13,7 +15,7 @@ router.post('/register', (req, res) => {
 router.post('/login', userController.login);
 
 // 注销路由
-router.post('/logout', userController.logout);
+router.post('/logout', userController.verifyToken(), userController.logout);
 
 // 获取当前用户信息（GET /users）
 router.get('/', userController.verifyToken(), userController.getUserProfile);
@@ -30,12 +32,6 @@ router.put('/profile', userController.verifyToken(), userController.updateUserPr
 // 更新用户偏好类别
 router.put('/profile/favorite-category', userController.verifyToken(), userController.updateFavoriteCategory);
 
-// 获取用户会话日志
-router.get('/session-logs', userController.verifyToken(), userController.getUserSessionLogs);
-
-// 获取指定用户的会话日志（管理员和销售专用）
-router.get('/:userId/session-logs', userController.verifyToken(), userController.getUserSessionLogs);
-
 // 获取用户统计信息（管理员和销售专用）
 router.get('/stats', userController.verifyToken(), userController.getUserStats);
 
@@ -48,5 +44,11 @@ router.get('/profile', userController.verifyToken('customer'), (req, res) => {
 router.get('/sales-dashboard', userController.verifyToken('sales'), (req, res) => {
     res.json({ message: '销售人员访问成功', userId: req.userId });
 });
+
+// 用户活动日志 - 记录产品浏览时间
+router.post('/activity-logs', userActivityController.logProductView);
+
+// 获取用户产品浏览记录
+router.get('/:userId/activity-logs', authenticate, userActivityController.getUserProductViews);
 
 module.exports = router;

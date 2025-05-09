@@ -125,7 +125,7 @@ function loadProducts(resetPage = true) {
     
     // 构建API URL，添加分页参数
     const { page, limit } = window.productsState.pagination;
-    const apiUrl = `http://localhost:3000/products?page=${page}&limit=${limit}`;
+    const apiUrl = `http://localhost:3000/api/products?page=${page}&limit=${limit}`;
     
     fetch(apiUrl)
         .then(response => response.json())
@@ -255,7 +255,7 @@ function handleInfiniteScroll() {
 
 // 专门为商品选择加载类别
 function loadCategoriesForProducts() {
-    fetch('http://localhost:3000/products/categories/all')
+    fetch('http://localhost:3000/api/products/categories/all')
         .then(response => response.json())
         .then(data => {
             if (data.success && Array.isArray(data.categories)) {
@@ -312,7 +312,7 @@ function deleteProduct(productId) {
         return;
     }
     
-    fetch(`http://localhost:3000/products/${productId}`, {
+    fetch(`http://localhost:3000/api/products/${productId}`, {
         method: 'DELETE',
         headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -347,7 +347,7 @@ function hideAddProductForm() {
 
 // 显示编辑产品表单
 function showEditProductForm(productId) {
-    fetch(`http://localhost:3000/products/${productId}`)
+    fetch(`http://localhost:3000/api/products/${productId}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -412,7 +412,7 @@ async function addProduct(event) {
     }
 
     try {
-        const response = await fetch('http://localhost:3000/products', {
+        const response = await fetch('http://localhost:3000/api/products', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -454,7 +454,7 @@ async function updateProduct(event) {
     }
 
     try {
-        const response = await fetch(`http://localhost:3000/products/${productId}`, {
+        const response = await fetch(`http://localhost:3000/api/products/${productId}`, {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -495,7 +495,7 @@ async function loadCategories() {
         console.log('开始加载类别数据, 用户角色:', user.role); // 调试信息
         
         // 使用正确的API路径
-        const response = await fetch(`http://localhost:3000/products/categories/all`, {
+        const response = await fetch(`http://localhost:3000/api/products/categories/all`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -517,7 +517,7 @@ async function loadCategories() {
         // 获取每个类别的商品数量
         const categoriesWithCount = await Promise.all(data.categories.map(async (categoryName) => {
             try {
-                const countResponse = await fetch(`http://localhost:3000/products/category/${categoryName}`, {
+                const countResponse = await fetch(`http://localhost:3000/api/products/category/${categoryName}`, {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -662,7 +662,7 @@ async function addCategory(event) {
         const categoryDescription = document.getElementById('category-description').value;
         
         // 使用正确的API路径
-        const response = await fetch(`http://localhost:3000/products/categories`, {
+        const response = await fetch(`http://localhost:3000/api/products/categories`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -722,7 +722,7 @@ async function fetchCategoryDetails(categoryId) {
         const token = localStorage.getItem('token');
         
         // 获取指定类别的商品，从中提取类别信息
-        const response = await fetch(`http://localhost:3000/products/category/${categoryId}`, {
+        const response = await fetch(`http://localhost:3000/api/products/category/${categoryId}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -787,7 +787,7 @@ async function deleteCategory(categoryId) {
         const token = localStorage.getItem('token');
         
         // 使用正确的API路径
-        const response = await fetch(`http://localhost:3000/products/categories/${categoryId}`, {
+        const response = await fetch(`http://localhost:3000/api/products/categories/${categoryId}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -822,7 +822,7 @@ async function showCategoryProducts(categoryName) {
         const token = localStorage.getItem('token');
         
         // 使用正确的API路径
-        const response = await fetch(`http://localhost:3000/products/category/${categoryName}`, {
+        const response = await fetch(`http://localhost:3000/api/products/category/${categoryName}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,

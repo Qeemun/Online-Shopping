@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 加载并显示所有客户
 function loadCustomers() {
-    fetch('http://localhost:3000/customers/', {
+    fetch('http://localhost:3000/api/customers/', {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -46,7 +46,7 @@ function loadCustomers() {
 
 // 删除客户
 function deleteCustomer(customerId) {
-    fetch(`http://localhost:3000/customers/${customerId}`, {
+    fetch(`http://localhost:3000/api/customers/${customerId}`, {
         method: 'DELETE',
         headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -67,7 +67,7 @@ function deleteCustomer(customerId) {
 
 // 显示编辑客户表单
 function showEditCustomerForm(customerId) {
-    fetch(`http://localhost:3000/customers/${customerId}`, {
+    fetch(`http://localhost:3000/api/customers/${customerId}`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -100,7 +100,7 @@ async function updateCustomer(event) {
     };
 
     try {
-        const response = await fetch(`http://localhost:3000/customers/${customerId}`, {
+        const response = await fetch(`http://localhost:3000/api/customers/${customerId}`, {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -140,7 +140,7 @@ async function addCustomer(event) {
     };
 
     try {
-        const response = await fetch('http://localhost:3000/customers', {
+        const response = await fetch('http://localhost:3000/api/customers', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -166,7 +166,7 @@ async function addCustomer(event) {
 
 // 查看客户日志
 function viewCustomerLogs(customerId) {
-    fetch(`http://localhost:3000/customers/${customerId}/logs`, {
+    fetch(`http://localhost:3000/api/customers/${customerId}/logs`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,

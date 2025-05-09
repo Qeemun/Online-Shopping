@@ -16,8 +16,6 @@ module.exports = (sequelize) => {
     static associate(models) {
       User.hasMany(models.CartItem, { foreignKey: 'userId', as: 'cartItems' });
       User.hasMany(models.Order, { foreignKey: 'userId', as: 'orders' });
-      User.hasMany(models.UserActivityLog, { foreignKey: 'userId', as: 'activityLogs' });
-      User.hasMany(models.UserSessionLog, { foreignKey: 'userId', as: 'sessionLogs' });
       User.hasOne(models.UserProfile, { foreignKey: 'userId' });
       User.hasMany(models.Recommendation, { foreignKey: 'userId' });
     }

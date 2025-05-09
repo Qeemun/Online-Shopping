@@ -71,14 +71,56 @@
         <!-- Admin Dashboard Section -->
         <section id="admin-dashboard">
             <h2>管理选项</h2>
-            <ul>
-                <li><a href="salesStaffManagement.html">销售人员管理</a></li>
-                <li><a href="orderManagement.html">订单管理</a></li>
-                <li><a href="productCategoryManagement.html">商品与类别管理</a></li>
-                <li><a href="customerManagement.html">客户管理</a></li>
-                <li><a href="reports.html">销售报表</a></li>
-                <li><a href="systemLogs.html">系统日志</a></li>
-            </ul>
+            <div class="dashboard-cards">
+                <div class="dashboard-card">
+                    <div class="card-icon">👥</div>
+                    <div class="card-title">销售人员管理</div>
+                    <div class="card-description">管理销售人员账号，添加、删除销售人员和重置密码</div>
+                    <a href="salesStaffManagement.html" class="card-link">管理销售人员</a>
+                </div>
+                
+                <div class="dashboard-card">
+                    <div class="card-icon">📦</div>
+                    <div class="card-title">商品与类别管理</div>
+                    <div class="card-description">管理商品信息、分类和库存</div>
+                    <a href="productCategoryManagement.html" class="card-link">管理商品</a>
+                </div>
+                
+                <div class="dashboard-card">
+                    <div class="card-icon">📝</div>
+                    <div class="card-title">订单管理</div>
+                    <div class="card-description">查看和处理所有用户订单</div>
+                    <a href="orderManagement.html" class="card-link">管理订单</a>
+                </div>
+                
+                <div class="dashboard-card">
+                    <div class="card-icon">📊</div>
+                    <div class="card-title">销售报表</div>
+                    <div class="card-description">查看各类别销售统计数据和销售人员业绩</div>
+                    <a href="reports.html" class="card-link">查看报表</a>
+                </div>
+                
+                <div class="dashboard-card">
+                    <div class="card-icon">🔍</div>
+                    <div class="card-title">销售监控</div>
+                    <div class="card-description">监控商品销售状态、库存变化和实时业绩</div>
+                    <a href="productSalesMonitor.html" class="card-link">销售监控</a>
+                </div>
+                
+                <div class="dashboard-card">
+                    <div class="card-icon">👤</div>
+                    <div class="card-title">客户管理</div>
+                    <div class="card-description">管理客户信息和客户订单</div>
+                    <a href="customerManagement.html" class="card-link">管理客户</a>
+                </div>
+                
+                <div class="dashboard-card">
+                    <div class="card-icon">📄</div>
+                    <div class="card-title">系统日志</div>
+                    <div class="card-description">查看系统操作日志和用户活动记录</div>
+                    <a href="systemLogs.html" class="card-link">查看日志</a>
+                </div>
+            </div>
         </section>
 
         <!-- Sales Dashboard Section -->
@@ -118,13 +160,6 @@
                     <div class="card-title">订单管理</div>
                     <div class="card-description">管理与您负责商品相关的订单</div>
                     <a href="orderManagement.html" class="card-link">管理订单</a>
-                </div>
-                
-                <div class="dashboard-card">
-                    <div class="card-icon">👥</div>
-                    <div class="card-title">客户活动日志</div>
-                    <div class="card-description">查看客户对您负责商品的浏览和购买记录</div>
-                    <a href="customerActivityLogs.html" class="card-link">查看日志</a>
                 </div>
             </div>
         </section>

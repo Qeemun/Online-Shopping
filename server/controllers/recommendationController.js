@@ -2,31 +2,26 @@ const db = require('../models');
 const Recommendation = db.Recommendation;
 const User = db.User;
 const Product = db.Product;
-const UserActivityLog = db.UserActivityLog;
+// 移除日志相关引用
 
 // 获取用户推荐
 exports.getUserRecommendations = async (req, res) => {
     try {
         const userId = req.params.userId || req.user.id;
         
-        // 获取用户的推荐商品
-        const recommendations = await Recommendation.findAll({
-            where: { userId },
-            include: [{
-                model: Product,
-                attributes: ['id', 'name', 'description', 'price', 'imageUrl', 'category']
-            }],
-            order: [['score', 'DESC']],
+        // 由于没有活动日志，直接根据商品分类推荐
+        const products = await Product.findAll({
+            order: [['createdAt', 'DESC']],
             limit: 10
         });
         
         res.status(200).json({
             success: true,
-            recommendations: recommendations.map(rec => ({
-                id: rec.id,
-                productId: rec.productId,
-                score: parseFloat(rec.score),
-                product: rec.Product
+            recommendations: products.map(product => ({
+                id: Math.floor(Math.random() * 10000), // 生成随机ID
+                productId: product.id,
+                score: Math.random() * 5, // 随机分数
+                product: product
             }))
         });
     } catch (error) {
@@ -44,63 +39,19 @@ exports.generateRecommendations = async (req, res) => {
     try {
         const userId = req.params.userId;
         
-        // 1. 获取用户行为数据
-        const userActivities = await UserActivityLog.findAll({
-            where: { userId },
-            include: [{
-                model: Product,
-                attributes: ['id', 'category']
-            }]
+        // 简化推荐生成逻辑，移除对日志的依赖
+        // 获取随机分类的商品作为推荐
+        const products = await Product.findAll({
+            order: db.sequelize.random(),
+            limit: 10
         });
         
-        // 2. 分析用户偏好
-        const categoryScores = {};
-        userActivities.forEach(activity => {
-            if (!activity.Product || !activity.Product.category) return;
-            
-            const category = activity.Product.category;
-            if (!categoryScores[category]) categoryScores[category] = 0;
-            
-            // 根据行为类型赋予不同权重
-            switch(activity.action) {
-                case 'view':
-                    categoryScores[category] += 1;
-                    break;
-                case 'stay':
-                    categoryScores[category] += activity.durationSeconds ? 
-                        Math.min(activity.durationSeconds / 60, 5) : 2;
-                    break;
-                case 'purchase':
-                    categoryScores[category] += 10;
-                    break;
-            }
-        });
-        
-        // 3. 获取符合用户偏好的商品
-        const favoriteCategories = Object.keys(categoryScores)
-            .sort((a, b) => categoryScores[b] - categoryScores[a])
-            .slice(0, 3);
-            
-        const recommendedProducts = await Product.findAll({
-            where: {
-                category: favoriteCategories,
-                // 排除用户已购买的商品
-                id: {
-                    [db.Sequelize.Op.notIn]: userActivities
-                        .filter(a => a.action === 'purchase')
-                        .map(a => a.productId)
-                }
-            },
-            limit: 20
-        });
-        
-        // 4. 计算推荐分数并保存
         await Recommendation.destroy({ where: { userId } }); // 清除旧推荐
         
-        const newRecommendations = recommendedProducts.map(product => ({
+        const newRecommendations = products.map(product => ({
             userId,
             productId: product.id,
-            score: categoryScores[product.category] / 10 // 归一化分数
+            score: Math.random() * 5 // 随机分数
         }));
         
         await Recommendation.bulkCreate(newRecommendations);
@@ -162,31 +113,11 @@ exports.getSimilarProducts = async (req, res) => {
 // 获取热门推荐
 exports.getPopularRecommendations = async (req, res) => {
     try {
-        let popularProducts;
-        
-        // 先尝试根据用户活动获取热门商品
-        popularProducts = await Product.findAll({
-            include: [{
-                model: UserActivityLog,
-                attributes: [],
-                required: false
-            }],
-            attributes: [
-                'id', 'name', 'description', 'price', 'imageUrl', 'category',
-                [db.sequelize.fn('COUNT', db.sequelize.col('UserActivityLogs.id')), 'activityCount']
-            ],
-            group: ['Product.id'],
-            order: [[db.sequelize.literal('activityCount'), 'DESC']],
+        // 移除日志相关依赖，直接获取最新商品作为热门商品
+        const popularProducts = await Product.findAll({
+            order: [['createdAt', 'DESC']],
             limit: 10
         });
-        
-        // 如果没有足够数据，则直接获取最新商品
-        if (!popularProducts || popularProducts.length < 5) {
-            popularProducts = await Product.findAll({
-                order: [['createdAt', 'DESC']],
-                limit: 10
-            });
-        }
         
         res.status(200).json({
             success: true,

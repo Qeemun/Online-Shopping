@@ -7,7 +7,7 @@ function loadOrderDetails(orderId) {
         return;
     }
 
-    fetch(`http://localhost:3000/orders/${orderId}`, {
+    fetch(`http://localhost:3000/api/orders/${orderId}`, {
         headers: {
             'Authorization': `Bearer ${token}`
         }

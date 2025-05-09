@@ -9,7 +9,7 @@ function loadOrderHistory() {
 
     const orderHistoryBody = document.getElementById('order-history-body');
     
-    fetch('http://localhost:3000/orders/history', {
+    fetch('http://localhost:3000/api/orders/history', {
         headers: {
             'Authorization': `Bearer ${token}`
         }

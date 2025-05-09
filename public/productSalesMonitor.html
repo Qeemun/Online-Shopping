@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>商品销售监控 - 销售管理</title>
+    <title>商品销售监控 - 管理中心</title>
     <link rel="stylesheet" href="css/variables.css">
     <link rel="stylesheet" href="css/common.css">
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/unified-dashboard.css">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/productSalesMonitor.css">
-    
     <!-- 引入Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -22,58 +21,204 @@
         <nav>
             <a href="dashboard.html">返回管理面板</a>
             <a href="index.html">首页</a>
+            <span id="current-user"></span>
         </nav>
     </header>
 
-    <!-- Sales Monitoring Section -->
-    <section id="sales-monitoring">
-        <h2>销售状态监控</h2>
-        
-        <!-- 筛选器 -->
-        <div class="filter-controls">
-            <div class="filter-item">
-                <label for="category-filter">按类别:</label>
-                <select id="category-filter">
-                    <option value="">全部类别</option>
-                    <!-- 类别选项将动态加载 -->
-                </select>
+    <main>
+        <!-- 工具栏 -->
+        <section class="toolbar">
+            <div class="filter-group">
+                <div class="filter-item" id="sales-staff-selector-container" style="display: none;">
+                    <label for="sales-staff-selector">销售人员:</label>
+                    <select id="sales-staff-selector">
+                        <!-- 销售人员选项将被动态加载 -->
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label for="date-range">日期范围:</label>
+                    <select id="date-range">
+                        <option value="7">最近7天</option>
+                        <option value="30" selected>最近30天</option>
+                        <option value="90">最近3个月</option>
+                        <option value="365">最近1年</option>
+                        <option value="custom">自定义</option>
+                    </select>
+                </div>
+                <div class="filter-item" id="custom-date-container" style="display: none;">
+                    <div class="date-inputs">
+                        <div>
+                            <label for="start-date">开始日期:</label>
+                            <input type="date" id="start-date">
+                        </div>
+                        <div>
+                            <label for="end-date">结束日期:</label>
+                            <input type="date" id="end-date">
+                        </div>
+                    </div>
+                    <button id="apply-date-range" onclick="applyCustomDateRange()">应用</button>
+                </div>
+                <div class="action-buttons">
+                    <button id="update-analysis" class="primary-button">更新分析</button>
+                </div>
             </div>
-            <div class="filter-item">
-                <label for="status-filter">按状态:</label>
-                <select id="status-filter">
-                    <option value="">全部状态</option>
-                    <option value="normal">库存正常</option>
-                    <option value="warning">库存不足</option>
-                    <option value="danger">紧急补货</option>
-                </select>
+        </section>
+
+        <!-- 所有类别视图 -->
+        <section id="all-categories-view">
+            <h2>类别销售业绩</h2>
+
+            <!-- 统计图表区域 -->
+            <div class="charts-container">
+                <div class="chart-card">
+                    <h3>各类别销售额</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="category-revenue-chart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>各类别销售数量</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="category-quantity-chart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>各类别库存状态</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="category-stock-chart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card full-width">
+                    <h3>销售趋势分析</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="sales-trend-chart"></canvas>
+                    </div>
+                </div>
             </div>
-        </div>
-        
-        <!-- 销售图表 -->
-        <div class="chart-container">
-            <canvas id="sales-chart"></canvas>
-        </div>
-        
-        <!-- 商品状态表格 -->
-        <div class="table-container">
-            <h3>商品销售状态</h3>
-            <table id="product-status-table">
-                <thead>
-                    <tr>
-                        <th>商品名称</th>
-                        <th>类别</th>
-                        <th>已售数量</th>
-                        <th>剩余库存</th>
-                        <th>库存状态</th>
-                        <th>最近销售</th>
-                    </tr>
-                </thead>
-                <tbody id="product-status-body">
-                    <!-- 商品状态信息将动态加载 -->
-                </tbody>
-            </table>
-        </div>
-    </section>
+
+            <!-- 表格数据区域 -->
+            <div class="table-container">
+                <h3>类别销售详情</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>类别</th>
+                            <th>总销售额</th>
+                            <th>订单数</th>
+                            <th>销售数量</th>
+                            <th>平均客单价</th>
+                            <th>当前库存</th>
+                        </tr>
+                    </thead>
+                    <tbody id="category-performance-body">
+                        <!-- 类别业绩数据将动态加载 -->
+                        <tr>
+                            <td colspan="6" class="text-center">加载中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 特定销售人员视图 -->
+        <section id="staff-specific-view" style="display: none;">
+            <h2>销售人员 <span id="staff-name"></span> 负责的商品类别销售业绩</h2>
+
+            <!-- 统计图表区域 -->
+            <div class="charts-container">
+                <div class="chart-card">
+                    <h3>负责类别销售额</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="category-revenue-chart-staff"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>负责类别销售数量</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="category-quantity-chart-staff"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card full-width">
+                    <h3>销售趋势分析</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="sales-trend-chart-staff"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 表格数据区域 -->
+            <div class="table-container">
+                <h3>负责类别销售详情</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>类别</th>
+                            <th>总销售额</th>
+                            <th>订单数</th>
+                            <th>销售数量</th>
+                            <th>平均客单价</th>
+                            <th>当前库存</th>
+                        </tr>
+                    </thead>
+                    <tbody id="staff-category-performance-body">
+                        <!-- 销售人员类别业绩数据将动态加载 -->
+                        <tr>
+                            <td colspan="6" class="text-center">加载中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 实时监控 -->
+        <section id="realtime-monitor">
+            <h2>商品销售实时监控</h2>
+            
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <label for="category-filter">商品类别:</label>
+                    <select id="category-filter">
+                        <option value="">所有类别</option>
+                        <!-- 类别选项将动态加载 -->
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="status-filter">库存状态:</label>
+                    <select id="status-filter">
+                        <option value="">所有状态</option>
+                        <option value="normal">库存正常</option>
+                        <option value="warning">库存不足</option>
+                        <option value="danger">紧急补货</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="sales-chart"></canvas>
+            </div>
+            
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>商品名称</th>
+                            <th>类别</th>
+                            <th>已售数量</th>
+                            <th>库存数量</th>
+                            <th>状态</th>
+                            <th>最近销售</th>
+                        </tr>
+                    </thead>
+                    <tbody id="product-status-body">
+                        <!-- 产品状态数据将动态加载 -->
+                        <tr>
+                            <td colspan="6" class="text-center">加载中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
 
     <!-- Footer -->
     <footer>

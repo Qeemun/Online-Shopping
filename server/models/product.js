@@ -11,10 +11,6 @@ module.exports = (sequelize) => {
         foreignKey: 'productId',
         as: 'orderItems'
       });
-      Product.hasMany(models.UserActivityLog, {
-        foreignKey: 'productId',
-        as: 'activityLogs'
-      });
       Product.hasMany(models.Recommendation, {
         foreignKey: 'productId',
         as: 'recommendations'

@@ -3,9 +3,7 @@ const bcrypt = require('bcryptjs');
 const db = require('../models');  
 const User = db.User;
 const UserProfile = db.UserProfile;
-const UserSessionLog = db.UserSessionLog;
-const UserActivityLog = db.UserActivityLog;
-const logMiddleware = require('../config/middleware/logMiddleware');
+const LoginLog = db.LoginLog; // 添加LoginLog引入
 const { Op } = db.Sequelize;
 
 // 用户注册
@@ -80,7 +78,14 @@ exports.login = async (req, res) => {
         );
 
         // 记录登录日志
-        await logMiddleware.logUserSession(req, user, 'login');
+        await LoginLog.create({
+            userId: user.id,
+            role: user.role, 
+            action: 'login',
+            ipAddress: req.ip || req.connection.remoteAddress,
+            userAgent: req.headers['user-agent'],
+            sessionId: req.sessionID // 修正：使用正确的sessionID属性
+        });
 
         res.json({
             success: true,
@@ -161,21 +166,37 @@ exports.getUserProfile = async (req, res) => {
             role: user.role
         });
     } catch (error) {
-        res.status(500).json({ success: false,message: '获取用户资料时出错' });
+        res.status(500).json({ success: false, message: '获取用户资料时出错' });
     }
 };
 
 // 用户注销
-exports.logout = (req, res) => {
-    // 记录登出日志
-    if (req.user) {
-        logMiddleware.logUserSession(req, req.user, 'logout').catch(err => {
-            console.error('记录登出失败:', err);
+exports.logout = async (req, res) => {
+    try {
+        // 如果用户已登录，记录注销日志
+        if (req.userId) {
+            await LoginLog.create({
+                userId: req.userId,
+                role: req.role, 
+                action: 'logout',
+                ipAddress: req.ip || req.connection.remoteAddress,
+                userAgent: req.headers['user-agent'],
+                sessionId: req.sessionID || null
+            });
+            
+            // 注意：不要在这里创建ActivityLog，使用LoginLog即可
+        }
+        
+        // 客户端可以通过删除或禁用 token 来实现注销
+        res.json({ success: true, message: '注销成功' });
+    } catch (error) {
+        console.error("注销时出错:", error);
+        res.status(500).json({ 
+            success: false, 
+            message: "服务器错误",
+            error: error.message 
         });
     }
-    
-    // 客户端可以通过删除或禁用 token 来实现注销
-    res.json({ success: true, message: '注销成功' });
 };
 
 // 获取用户画像
@@ -208,35 +229,7 @@ exports.getUserProfileDetails = async (req, res) => {
             ]
         });
         
-        // 获取最近活动
-        const recentActivities = await UserActivityLog.findAll({
-            where: { userId },
-            order: [['createdAt', 'DESC']],
-            limit: 10,
-            include: [{
-                model: db.Product,
-                attributes: ['id', 'name', 'category']
-            }]
-        });
-        
-        // 获取类别偏好
-        const categoryPreference = await UserActivityLog.findAll({
-            where: { 
-                userId,
-                productId: { [Op.ne]: null }
-            },
-            include: [{
-                model: db.Product,
-                attributes: ['category']
-            }],
-            attributes: [
-                'Product.category',
-                [db.sequelize.fn('COUNT', db.sequelize.col('UserActivityLog.id')), 'count']
-            ],
-            group: ['Product.category'],
-            order: [[db.sequelize.literal('count'), 'DESC']],
-            limit: 3
-        });
+        // 移除用户活动日志相关代码
         
         // 整合用户画像数据
         const userProfile = {
@@ -250,27 +243,15 @@ exports.getUserProfileDetails = async (req, res) => {
             profile: user.UserProfile || { 
                 region: null, 
                 totalSpent: orderStats[0]?.dataValues.totalSpent || 0,
-                favoriteCategory: categoryPreference[0]?.dataValues['Product.category'] || null
+                favoriteCategory: null
             },
             stats: {
                 orderCount: orderStats[0]?.dataValues.orderCount || 0,
                 totalSpent: orderStats[0]?.dataValues.totalSpent || 0,
-                lastActivity: recentActivities[0]?.createdAt || null,
-                categoryPreference: categoryPreference.map(cat => ({
-                    category: cat.dataValues['Product.category'],
-                    count: cat.dataValues.count
-                }))
+                lastActivity: null,
+                categoryPreference: []
             },
-            recentActivities: recentActivities.map(activity => ({
-                id: activity.id,
-                action: activity.action,
-                createdAt: activity.createdAt,
-                product: activity.Product ? {
-                    id: activity.Product.id,
-                    name: activity.Product.name,
-                    category: activity.Product.category
-                } : null
-            }))
+            recentActivities: []
         };
         
         res.status(200).json({
@@ -353,44 +334,7 @@ exports.updateFavoriteCategory = async (req, res) => {
     }
 };
 
-// 获取用户会话日志
-exports.getUserSessionLogs = async (req, res) => {
-    try {
-        const userId = req.params.userId || req.userId;
-        const { page = 1, limit = 20 } = req.query;
-        
-        const offset = (page - 1) * limit;
-        
-        // 查询总数
-        const total = await UserSessionLog.count({ 
-            where: { userId } 
-        });
-        
-        // 查询会话日志
-        const logs = await UserSessionLog.findAll({
-            where: { userId },
-            order: [['createdAt', 'DESC']],
-            limit: parseInt(limit),
-            offset: offset
-        });
-        
-        res.status(200).json({
-            success: true,
-            total,
-            page: parseInt(page),
-            limit: parseInt(limit),
-            totalPages: Math.ceil(total / limit),
-            logs
-        });
-    } catch (error) {
-        console.error('获取用户会话日志失败:', error);
-        res.status(500).json({
-            success: false,
-            message: '获取用户会话日志时出错',
-            error: error.message
-        });
-    }
-};
+// 移除获取用户会话日志功能
 
 // 获取用户统计信息
 exports.getUserStats = async (req, res) => {
@@ -429,7 +373,7 @@ exports.getUserStats = async (req, res) => {
         });
         
         // 用户角色分布
-        const userRoleDistribution = await User.findAll({
+        const roleDistribution = await User.findAll({
             attributes: [
                 'role',
                 [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'count']
@@ -443,7 +387,7 @@ exports.getUserStats = async (req, res) => {
                 totalUsers,
                 newUsersToday,
                 userGrowthTrend,
-                userRoleDistribution
+                roleDistribution
             }
         });
     } catch (error) {

@@ -16,7 +16,7 @@ function loadCart() {
     errorMessage.style.display = 'none';
     cartContent.style.display = 'none';
     
-    fetch('http://localhost:3000/cart/items', {
+    fetch('http://localhost:3000/api/cart/items', {
         headers: {
             'Authorization': `Bearer ${token}`
         }
@@ -92,7 +92,7 @@ function updateQuantity(productId, quantity) {
         return;
     }
 
-    fetch('http://localhost:3000/cart/update', {
+    fetch('http://localhost:3000/api/cart/update', {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
@@ -126,7 +126,7 @@ function removeFromCart(productId) {
 
     if (!confirm('确定要删除这件商品吗？')) return;
 
-    fetch('http://localhost:3000/cart/remove', {
+    fetch('http://localhost:3000/api/cart/remove', {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json',
@@ -165,7 +165,7 @@ function checkout() {
     checkoutButton.disabled = true;
     checkoutButton.textContent = '正在创建订单...';
 
-    fetch('http://localhost:3000/orders/create', {
+    fetch('http://localhost:3000/api/orders/create', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

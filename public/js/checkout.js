@@ -7,7 +7,7 @@ function loadOrderSummary(orderId) {
         return;
     }
 
-    fetch(`http://localhost:3000/orders/${orderId}`, {
+    fetch(`http://localhost:3000/api/orders/${orderId}`, {
         headers: {
             'Authorization': `Bearer ${token}`
         }
@@ -218,7 +218,7 @@ function handlePayment(orderId) {
     document.getElementById('payment-status').style.color = "orange";
 
     // 模拟向后端发送支付请求
-    fetch('http://localhost:3000/pay', {
+    fetch('http://localhost:3000/api/pay', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

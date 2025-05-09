@@ -1,4 +1,6 @@
 // 产品详情页面专用脚本
+let viewStartTime = Date.now(); // 记录页面浏览起始时间
+
 document.addEventListener('DOMContentLoaded', async function () {
     // 检查用户登录状态
     updateLoginStatus();
@@ -20,10 +22,11 @@ document.addEventListener('DOMContentLoaded', async function () {
     
     // 设置全局变量，用于记录停留时间
     window.productId = id;
+    viewStartTime = Date.now();
     
     try {
         // 获取产品详情
-        const response = await fetch(`http://localhost:3000/products/${id}`);
+        const response = await fetch(`http://localhost:3000/api/products/${id}`);
         const data = await response.json();
         
         if (!data.success || !data.product) {
@@ -52,6 +55,34 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     }
 });
+
+// 页面卸载时记录浏览时间
+window.addEventListener('beforeunload', function() {
+    recordViewDuration();
+});
+
+// 记录产品浏览时间
+function recordViewDuration() {
+    try {
+        if (!window.productId) return;
+        
+        const durationSeconds = Math.floor((Date.now() - viewStartTime) / 1000);
+        if (durationSeconds < 1) return; // 忽略非常短的浏览
+        
+        console.log('记录产品浏览时间:', window.productId, '持续时间:', durationSeconds, '秒');
+        
+        // 调用API记录浏览时间
+        logProductViewDuration(window.productId, durationSeconds);
+        
+        // 重置计时器
+        viewStartTime = Date.now();
+    } catch (error) {
+        console.error('记录浏览时间出错:', error);
+    }
+}
+
+// 定期记录浏览时间（每30秒）
+setInterval(recordViewDuration, 30000);
 
 // 更新登录状态
 function updateLoginStatus() {
@@ -179,7 +210,7 @@ function addToCart(productId) {
         }
     }
 
-    fetch('http://localhost:3000/cart', {
+    fetch('http://localhost:3000/api/cart', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -232,7 +263,7 @@ async function loadSimilarProducts(productId) {
     if (!similarProductsSection) return;
     
     try {
-        const response = await fetch(`http://localhost:3000/recommendations/similar/${productId}`);
+        const response = await fetch(`http://localhost:3000/api/recommendations/similar/${productId}`);
         const data = await response.json();
         
         if (data.success && data.products && data.products.length > 0) {
@@ -267,7 +298,7 @@ async function loadUserRecommendations(currentProductId) {
             return;
         }
         
-        const response = await fetch('http://localhost:3000/recommendations/mine', {
+        const response = await fetch('http://localhost:3000/api/recommendations/mine', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -310,7 +341,7 @@ async function loadPopularProducts(currentProductId) {
     if (!popularRecommendationsSection) return;
     
     try {
-        const response = await fetch('http://localhost:3000/recommendations/popular');
+        const response = await fetch('http://localhost:3000/api/recommendations/popular');
         const data = await response.json();
         
         if (data.success && data.products && data.products.length > 0) {

@@ -3,47 +3,47 @@ const API_BASE_URL = 'http://localhost:3000';
 
 // 用户相关API
 const userApi = {
-    register: `${API_BASE_URL}/users/register`,
-    login: `${API_BASE_URL}/users/login`,
-    logout: `${API_BASE_URL}/users/logout`,
-    profile: `${API_BASE_URL}/users/profile/details`,
-    updateProfile: `${API_BASE_URL}/users/profile`,
-    updateFavoriteCategory: `${API_BASE_URL}/users/profile/favorite-category`,
-    sessionLogs: `${API_BASE_URL}/users/session-logs`,
-    stats: `${API_BASE_URL}/users/stats`
+    register: `${API_BASE_URL}/api/users/register`,
+    login: `${API_BASE_URL}/api/users/login`,
+    logout: `${API_BASE_URL}/api/users/logout`,
+    profile: `${API_BASE_URL}/api/users/profile/details`,
+    updateProfile: `${API_BASE_URL}/api/users/profile`,
+    updateFavoriteCategory: `${API_BASE_URL}/api/users/profile/favorite-category`,
+    sessionLogs: `${API_BASE_URL}/api/users/session-logs`,
+    stats: `${API_BASE_URL}/api/users/stats`
 };
 
 // 产品相关API
 const productApi = {
-    list: `${API_BASE_URL}/products`,
-    details: (id) => `${API_BASE_URL}/products/${id}`,
-    create: `${API_BASE_URL}/products`,
-    update: (id) => `${API_BASE_URL}/products/${id}`,
-    delete: (id) => `${API_BASE_URL}/products/${id}`,
-    category: (category) => `${API_BASE_URL}/products/category/${category}`
+    list: `${API_BASE_URL}/api/products`,
+    details: (id) => `${API_BASE_URL}/api/products/${id}`,
+    create: `${API_BASE_URL}/api/products`,
+    update: (id) => `${API_BASE_URL}/api/products/${id}`,
+    delete: (id) => `${API_BASE_URL}/api/products/${id}`,
+    category: (category) => `${API_BASE_URL}/api/products/category/${category}`
 };
 
 // 购物车相关API
 const cartApi = {
-    list: `${API_BASE_URL}/cart`,
-    add: `${API_BASE_URL}/cart`,
-    update: `${API_BASE_URL}/cart`,
-    remove: `${API_BASE_URL}/cart`
+    list: `${API_BASE_URL}/api/cart`,
+    add: `${API_BASE_URL}/api/cart`,
+    update: `${API_BASE_URL}/api/cart`,
+    remove: `${API_BASE_URL}/api/cart`
 };
 
 // 订单相关API
 const orderApi = {
-    create: `${API_BASE_URL}/orders`,
-    list: `${API_BASE_URL}/orders`,
-    details: (id) => `${API_BASE_URL}/orders/${id}`,
-    update: (id) => `${API_BASE_URL}/orders/${id}`
+    create: `${API_BASE_URL}/api/orders`,
+    list: `${API_BASE_URL}/api/orders`,
+    details: (id) => `${API_BASE_URL}/api/orders/${id}`,
+    update: (id) => `${API_BASE_URL}/api/orders/${id}`
 };
 
-// 用户活动日志API
+// 用户活动日志API - 修正API路径，使用users路由下的activity-logs接口
 const activityApi = {
-    userLogs: (userId) => `${API_BASE_URL}/user-activity/customers/${userId}/logs`,
-    addLog: `${API_BASE_URL}/user-activity/logs`,
-    productStats: (productId) => `${API_BASE_URL}/user-activity/products/${productId}/stats`
+    userLogs: (userId) => `${API_BASE_URL}/api/users/${userId}/activity-logs`,
+    addLog: `${API_BASE_URL}/api/users/activity-logs`,
+    productStats: (productId) => `${API_BASE_URL}/api/products/${productId}/stats`
 };
 
 // 管理员日志API
@@ -55,9 +55,9 @@ const adminLogApi = {
 
 // 推荐系统API
 const recommendationApi = {
-    userRecommendations: `${API_BASE_URL}/recommendations/mine`,
-    similarProducts: (productId) => `${API_BASE_URL}/recommendations/similar/${productId}`,
-    popularProducts: `${API_BASE_URL}/recommendations/popular`
+    userRecommendations: `${API_BASE_URL}/api/recommendations/mine`,
+    similarProducts: (productId) => `${API_BASE_URL}/api/recommendations/similar/${productId}`,
+    popularProducts: `${API_BASE_URL}/api/recommendations/popular`
 };
 
 // 通用请求函数
@@ -114,15 +114,28 @@ const api = {
 
 // 记录用户停留时间
 function logProductViewDuration(productId, durationSeconds) {
-    const userId = JSON.parse(localStorage.getItem('user'))?.id;
-    if (!userId || !productId) return;
+    const user = localStorage.getItem('user');
+    // 如果用户未登录，不记录活动
+    if (!user || !productId) return Promise.resolve();
 
-    return fetchApi(api.activity.addLog, {
-        method: 'POST',
-        body: JSON.stringify({
-            userId,
-            productId,
-            durationSeconds
-        })
-    }).catch(err => console.error('记录产品停留时间失败:', err));
+    try {
+        const userId = JSON.parse(user)?.id;
+        if (!userId) return Promise.resolve();
+
+        return fetchApi(api.activity.addLog, {
+            method: 'POST',
+            body: JSON.stringify({
+                userId,
+                productId,
+                durationSeconds
+            })
+        }).catch(err => {
+            console.error('记录产品停留时间失败:', err);
+            // 返回已解决的Promise以避免未处理的拒绝
+            return Promise.resolve();
+        });
+    } catch (e) {
+        console.error('解析用户信息失败:', e);
+        return Promise.resolve();
+    }
 }

@@ -299,7 +299,8 @@ function loadProducts(searchQuery = '', resetPage = true) {
     params.append('page', page);
     params.append('limit', limit);
     
-    const apiUrl = `http://localhost:3000/products?${params.toString()}`;
+    // 修正API URL，添加/api前缀
+    const apiUrl = `http://localhost:3000/api/products?${params.toString()}`;
 
     // 请求产品数据
     fetch(apiUrl)
@@ -477,9 +478,13 @@ function updateLoginStatus() {
         logoutButton.style.display = 'inline';
         usernameDiv.textContent = `欢迎, ${user.username}`;
         
-        // 如果是销售人员，显示产品管理链接
-        if (user.role === 'sales') {
+        // 如果是销售人员或管理员，显示管理界面链接
+        if (user.role === 'sales' || user.role === 'admin') {
             adminLink.style.display = 'inline';
+            adminLink.href = 'dashboard.html'; // 统一指向管理控制面板
+            adminLink.textContent = user.role === 'admin' ? '管理控制面板' : '销售管理';
+        } else {
+            adminLink.style.display = 'none';
         }
     } else {
         // 未登录状态
@@ -507,7 +512,8 @@ function addToCart(productId) {
         button.textContent = '添加中...';
     }
 
-    fetch('http://localhost:3000/cart', {
+    // 修正API URL，添加/api前缀
+    fetch('http://localhost:3000/api/cart', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

@@ -7,7 +7,7 @@ function loadOrders() {
     const orderTableBody = document.getElementById('order-table-body');
     orderTableBody.innerHTML = ''; // 清空表格内容
 
-    fetch('http://localhost:3000/orders/', {
+    fetch('http://localhost:3000/api/orders/', {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -55,7 +55,7 @@ function loadOrders() {
 
 // 更新订单状态
 function updateOrderStatus(orderId, status) {
-    fetch(`http://localhost:3000/orders/update/${orderId}`, {
+    fetch(`http://localhost:3000/api/orders/update/${orderId}`, {
         method: 'PUT',
         headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -79,7 +79,7 @@ function updateOrderStatus(orderId, status) {
 
 // 更新订单信息
 function updateOrderInfo(orderId, field, value) {
-    fetch(`http://localhost:3000/orders/update/${orderId}`, {
+    fetch(`http://localhost:3000/api/orders/update/${orderId}`, {
         method: 'PUT',
         headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -104,7 +104,7 @@ function updateOrderInfo(orderId, field, value) {
 // 删除订单
 function deleteOrder(orderId) {
     if (confirm('确定要删除此订单吗？')) {
-        fetch(`http://localhost:3000/orders/${orderId}`, {
+        fetch(`http://localhost:3000/api/orders/${orderId}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`,

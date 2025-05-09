@@ -2,15 +2,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // 获取当前页面的路径
     const currentPath = window.location.pathname;
     
-    //如果当前在登录页面，不要自动跳转
+    // 如果当前在登录页面，初始化登录页面元素
     if (currentPath.includes('login.html')) {
-        // 只初始化表单状态
-        document.getElementById('error-message').style.display = 'none';
-        document.getElementById('loading-indicator').style.display = 'none';
-        return;
+        const errorElement = document.getElementById('error-message');
+        const loadingElement = document.getElementById('loading-indicator');
+        if (errorElement) errorElement.style.display = 'none';
+        if (loadingElement) loadingElement.style.display = 'none';
+    }
+    // 如果当前在注册页面，初始化注册页面元素
+    else if (currentPath.includes('register.html')) {
+        const errorElement = document.getElementById('error-message');
+        const loadingElement = document.getElementById('loading-indicator');
+        if (errorElement) errorElement.style.display = 'none';
+        if (loadingElement) loadingElement.style.display = 'none';
     }
 
-    // 其他页面才检查登录状态并跳转
+    // 检查登录状态
     const user = localStorage.getItem('user');
     const token = localStorage.getItem('token');
 
@@ -19,8 +26,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentPath.includes('login.html')) {
             window.location.href = 'index.html';
         }
+    } else if (!currentPath.includes('login.html') && !currentPath.includes('register.html')) {
+        // 未登录状态下，如果访问需要登录的页面，重定向到登录页
+        const restrictedPages = ['dashboard.html', 'cart.html', 'checkout.html', 'orderHistory.html'];
+        if (restrictedPages.some(page => currentPath.includes(page))) {
+            window.location.href = 'login.html';
+        }
     }
 });
+
 // 登录功能
 function loginUser(event) {
     event.preventDefault(); // 防止表单默认提交行为
@@ -39,7 +53,7 @@ function loginUser(event) {
     showLoading(true);
 
     // 发送请求到后端验证用户
-    fetch('http://localhost:3000/users/login', {
+    fetch('http://localhost:3000/api/users/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),  // 确保这里传递了 email
         headers: { 'Content-Type': 'application/json' }
@@ -97,7 +111,7 @@ function registerUser(event) {
     showLoading(true);
 
     // 发送请求到后端注册用户
-    fetch('http://localhost:3000/users/register', {
+    fetch('http://localhost:3000/api/users/register', {
         method: 'POST',
         body: JSON.stringify({ username, email, password }),
         headers: { 'Content-Type': 'application/json' }
@@ -122,32 +136,62 @@ function registerUser(event) {
 // 显示错误信息
 function showError(message) {
     const errorMessageElement = document.getElementById('error-message');
-    errorMessageElement.textContent = message;
-    errorMessageElement.style.display = 'block'; // 显示错误信息
+    if (errorMessageElement) {
+        errorMessageElement.textContent = message;
+        errorMessageElement.style.display = 'block'; // 显示错误信息
+    } else {
+        console.error('错误:', message);
+    }
 }
 
 // 显示加载状态
 function showLoading(isLoading) {
     const loadingIndicator = document.getElementById('loading-indicator');
-    if (isLoading) {
-        loadingIndicator.style.display = 'block'; // 显示加载提示
-    } else {
-        loadingIndicator.style.display = 'none'; // 隐藏加载提示
+    if (loadingIndicator) {
+        if (isLoading) {
+            loadingIndicator.style.display = 'block'; // 显示加载提示
+        } else {
+            loadingIndicator.style.display = 'none'; // 隐藏加载提示
+        }
     }
 }
 
 // 退出登录
 function logout() {
-    localStorage.removeItem('user'); // 清除本地存储中的用户信息
-    localStorage.removeItem('token');
-    window.location.href = 'login.html'; // 跳转到登录页面
+    const token = localStorage.getItem('token');
+    
+    // 如果有token，调用后端注销接口
+    if (token) {
+        fetch('http://localhost:3000/api/users/logout', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        })
+        .then(response => response.json())
+        .catch(error => console.error('注销时出错:', error))
+        .finally(() => {
+            // 无论请求成功与否，都清除本地存储
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+        });
+    } else {
+        // 如果没有token，直接清除本地存储并跳转
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        window.location.href = 'login.html';
+    }
 }
 
 // 页面加载时，初始化
 document.addEventListener('DOMContentLoaded', () => {
     // 初始化时隐藏错误信息和加载提示
-    document.getElementById('error-message').style.display = 'none';
-    document.getElementById('loading-indicator').style.display = 'none';
+    const errorElement = document.getElementById('error-message');
+    const loadingElement = document.getElementById('loading-indicator');
+    if (errorElement) errorElement.style.display = 'none';
+    if (loadingElement) loadingElement.style.display = 'none';
 });
 
 

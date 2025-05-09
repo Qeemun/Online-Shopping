@@ -16,9 +16,9 @@ document.addEventListener('DOMContentLoaded', () => {
 // 检查用户是否已登录且为管理员
 function checkAuth() {
     const token = localStorage.getItem('token');
-    const userRole = localStorage.getItem('userRole');
+    const role = localStorage.getItem('role');
     
-    if (!token || userRole !== 'admin') {
+    if (!token || role !== 'admin') {
         alert('您无权访问此页面，仅管理员可访问。');
         window.location.href = 'login.html';
     }
