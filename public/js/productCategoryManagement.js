@@ -147,7 +147,15 @@ function loadProducts(resetPage = true) {
                             <td>${product.price}</td>
                             <td>${product.stock}</td>
                             <td>
+                                ${product.status === 'discontinued' 
+                                ? '<span class="status-discontinued">已停售</span>' 
+                                : '<span class="status-active">销售中</span>'}
+                            </td>
+                            <td>
                                 <button onclick="showEditProductForm(${product.id})">编辑</button>
+                                ${product.status === 'discontinued'
+                                ? `<button class="btn-success" onclick="updateProductStatus(${product.id}, 'active')">恢复销售</button>`
+                                : `<button class="btn-warning" onclick="updateProductStatus(${product.id}, 'discontinued')">停售</button>`}
                                 <button class="btn-danger" onclick="deleteProduct(${product.id})">删除</button>
                             </td>
                         </tr>`;
@@ -483,6 +491,35 @@ async function updateProduct(event) {
         console.error('更新商品失败:', error);
         showNotification('更新失败，请重试', 'error');
     }
+}
+
+// 更新产品状态（活跃/停售）
+function updateProductStatus(productId, status) {
+    if (!confirm(`确定要将该商品${status === 'active' ? '恢复销售' : '设为停售'}吗？`)) {
+        return;
+    }
+    
+    fetch(`http://localhost:3000/api/products/${productId}/status`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ status })
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(`商品已${status === 'active' ? '恢复销售' : '停售'}`, 'success');
+                loadProducts();  // 重新加载产品列表
+            } else {
+                showNotification('操作失败: ' + data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('更新产品状态失败', error);
+            showNotification('操作失败，请重试', 'error');
+        });
 }
 
 //==========================

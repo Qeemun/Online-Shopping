@@ -212,7 +212,7 @@ exports.getUserProfileDetails = async (req, res) => {
             attributes: ['id', 'username', 'email', 'role', 'createdAt'],
             include: [{
                 model: UserProfile,
-                attributes: ['region', 'totalSpent', 'favoriteCategory']
+                attributes: ['region', 'totalSpent', 'favoriteCategory', 'phone', 'address', 'fullName', 'profileComplete']
             }]
         });
         
@@ -228,11 +228,122 @@ exports.getUserProfileDetails = async (req, res) => {
             where: { userId },
             attributes: [
                 [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'orderCount'],
-                [db.sequelize.fn('SUM', db.sequelize.col('totalAmount')), 'totalSpent']
+                [db.sequelize.fn('SUM', db.sequelize.col('totalAmount')), 'totalSpent'],
+                [db.sequelize.fn('AVG', db.sequelize.col('totalAmount')), 'avgOrderValue'],
+                [db.sequelize.fn('MAX', db.sequelize.col('createdAt')), 'lastOrderDate']
             ]
         });
         
-        // 移除用户活动日志相关代码
+        // 获取用户所有订单，用于分析购买频率和价格敏感度
+        const orders = await db.Order.findAll({
+            where: { userId, status: 'completed' },
+            attributes: ['id', 'totalAmount', 'createdAt'],
+            order: [['createdAt', 'DESC']],
+            limit: 20
+        });
+        
+        // 获取用户的商品浏览记录
+        const productViews = await db.sequelize.models.ProductViewLog.findAll({
+            where: { userId },
+            attributes: ['productId', 'durationSeconds', 'createdAt'],
+            include: [{
+                model: db.Product,
+                as: 'product',
+                attributes: ['name', 'price', 'category']
+            }],
+            order: [['createdAt', 'DESC']],
+            limit: 50
+        });
+        
+        // 计算用户购买行为特征
+        let purchaseFrequency = 'low'; // 低频率
+        let priceSegment = 'medium'; // 中等价格段
+        let lifetimeValue = 0;
+        let daysFromLastPurchase = null;
+        let activityTimePattern = 'unknown';
+        
+        // 计算购买频率
+        if (orders.length >= 2) {
+            const purchaseDates = orders.map(o => new Date(o.createdAt));
+            const timeDiffs = [];
+            
+            // 计算订单之间的时间间隔
+            for(let i = 1; i < purchaseDates.length; i++) {
+                const diff = purchaseDates[i-1].getTime() - purchaseDates[i].getTime();
+                timeDiffs.push(diff / (1000 * 60 * 60 * 24)); // 转换为天数
+            }
+            
+            // 计算平均购买间隔
+            const avgTimeBetweenOrders = timeDiffs.reduce((a, b) => a + b, 0) / timeDiffs.length;
+            if (avgTimeBetweenOrders <= 30) purchaseFrequency = 'high'; // 平均一个月内
+            else if (avgTimeBetweenOrders <= 90) purchaseFrequency = 'medium'; // 平均三个月内
+            
+            // 计算客户终身价值 (LTV)
+            lifetimeValue = parseFloat(orderStats[0]?.dataValues.totalSpent) || 0;
+            
+            // 计算距离最后一次购买的天数
+            if (orders.length > 0) {
+                const lastOrderDate = new Date(orders[0].createdAt);
+                const today = new Date();
+                daysFromLastPurchase = Math.round((today - lastOrderDate) / (1000 * 60 * 60 * 24));
+            }
+            
+            // 分析活跃时段
+            const purchaseHours = orders.map(o => new Date(o.createdAt).getHours());
+            const morningOrders = purchaseHours.filter(h => h >= 6 && h < 12).length;
+            const afternoonOrders = purchaseHours.filter(h => h >= 12 && h < 18).length;
+            const eveningOrders = purchaseHours.filter(h => h >= 18 && h < 24).length;
+            const nightOrders = purchaseHours.filter(h => h >= 0 && h < 6).length;
+            
+            // 确定主要活动时段
+            const timeSlots = [
+                { name: 'morning', count: morningOrders },
+                { name: 'afternoon', count: afternoonOrders },
+                { name: 'evening', count: eveningOrders },
+                { name: 'night', count: nightOrders }
+            ];
+            
+            // 找出数量最多的时段
+            const mainTimeSlot = timeSlots.reduce((max, slot) => max.count > slot.count ? max : slot);
+            if (mainTimeSlot.count > 0) {
+                activityTimePattern = mainTimeSlot.name;
+            }
+            
+            // 根据平均订单金额确定价格区间
+            const avgOrderValue = parseFloat(orderStats[0]?.dataValues.avgOrderValue) || 0;
+            if (avgOrderValue <= 100) priceSegment = 'low';
+            else if (avgOrderValue <= 500) priceSegment = 'medium';
+            else priceSegment = 'high';
+        }
+        
+        // 获取用户类别偏好
+        const orderItems = await db.OrderItem.findAll({
+            include: [
+                { 
+                    model: db.Order,
+                    where: { userId },
+                    attributes: []
+                },
+                {
+                    model: db.Product,
+                    attributes: ['category']
+                }
+            ]
+        });
+        
+        // 统计类别购买频率
+        const categoryCount = {};
+        orderItems.forEach(item => {
+            const category = item.product?.category;
+            if (category) {
+                categoryCount[category] = (categoryCount[category] || 0) + 1;
+            }
+        });
+        
+        // 转换为数组并排序
+        const categoryPreference = Object.entries(categoryCount)
+            .map(([category, count]) => ({ category, count }))
+            .sort((a, b) => b.count - a.count);
         
         // 整合用户画像数据
         const userProfile = {
@@ -246,15 +357,36 @@ exports.getUserProfileDetails = async (req, res) => {
             profile: user.UserProfile || { 
                 region: null, 
                 totalSpent: orderStats[0]?.dataValues.totalSpent || 0,
-                favoriteCategory: null
-            },
-            stats: {
+                favoriteCategory: null,
+                fullName: null,
+                phone: null,
+                address: null,
+                profileComplete: false
+            },            stats: {
                 orderCount: orderStats[0]?.dataValues.orderCount || 0,
                 totalSpent: orderStats[0]?.dataValues.totalSpent || 0,
-                lastActivity: null,
-                categoryPreference: []
+                avgOrderValue: orderStats[0]?.dataValues.avgOrderValue || 0,
+                lastOrderDate: orderStats[0]?.dataValues.lastOrderDate || null,
+                purchaseFrequency: purchaseFrequency,
+                priceSegment: priceSegment,
+                daysFromLastPurchase: daysFromLastPurchase,
+                activityTimePattern: activityTimePattern,
+                lifetimeValue: lifetimeValue,
+                categoryPreference: categoryPreference
             },
-            recentActivities: []
+            behaviorMetrics: {
+                engagementScore: calculateEngagementScore(productViews, orders),
+                loyaltyIndex: calculateLoyaltyIndex(orders, daysFromLastPurchase),
+                priceElasticity: calculatePriceElasticity(orders),
+                churnRisk: calculateChurnRisk(daysFromLastPurchase, purchaseFrequency)
+            },
+            recentActivities: productViews.slice(0, 10).map(view => ({
+                type: 'view',
+                productName: view.product.name,
+                productCategory: view.product.category,
+                durationSeconds: view.durationSeconds,
+                timestamp: view.createdAt
+            }))
         };
         
         res.status(200).json({
@@ -547,3 +679,133 @@ exports.deleteCustomer = async (req, res) => {
         });
     }
 };
+
+// 计算用户参与度评分 (0-100)
+function calculateEngagementScore(productViews, orders) {
+    // 基本分数: 从0开始
+    let score = 0;
+    
+    // 根据商品浏览记录评分 (最多40分)
+    if (productViews && productViews.length > 0) {
+        // 浏览记录数量给分
+        score += Math.min(productViews.length, 20) * 1.5;
+        
+        // 浏览时长奖励 (超过30秒的浏览加分，最多10分)
+        const longViews = productViews.filter(v => v.durationSeconds >= 30).length;
+        score += Math.min(longViews, 10);
+    }
+    
+    // 根据订单记录评分 (最多60分)
+    if (orders && orders.length > 0) {
+        // 订单数量给分
+        score += Math.min(orders.length, 10) * 4;
+        
+        // 最近订单加分 (30天内有订单加20分)
+        const now = new Date();
+        const recentOrderCount = orders.filter(order => {
+            const orderDate = new Date(order.createdAt);
+            const diffDays = (now - orderDate) / (1000 * 60 * 60 * 24);
+            return diffDays <= 30;
+        }).length;
+        
+        if (recentOrderCount > 0) {
+            score += 20;
+        }
+    }
+    
+    // 确保分数在0-100之间
+    return Math.min(Math.max(Math.round(score), 0), 100);
+}
+
+// 计算用户忠诚度指数 (0-100)
+function calculateLoyaltyIndex(orders, daysFromLastPurchase) {
+    // 如果没有订单，忠诚度为0
+    if (!orders || orders.length === 0) {
+        return 0;
+    }
+    
+    let score = 0;
+    
+    // 订单频率得分 (最多40分)
+    score += Math.min(orders.length, 10) * 4;
+    
+    // 最近购买行为得分 (最多60分)
+    // 一周内购买: 60分
+    // 一月内购买: 40分
+    // 三月内购买: 20分
+    // 超过三月: 10分
+    // 超过六月: 5分
+    // 超过一年: 0分
+    if (daysFromLastPurchase <= 7) {
+        score += 60;
+    } else if (daysFromLastPurchase <= 30) {
+        score += 40;
+    } else if (daysFromLastPurchase <= 90) {
+        score += 20;
+    } else if (daysFromLastPurchase <= 180) {
+        score += 10;
+    } else if (daysFromLastPurchase <= 365) {
+        score += 5;
+    }
+    
+    // 确保分数在0-100之间
+    return Math.min(Math.max(Math.round(score), 0), 100);
+}
+
+// 计算用户价格弹性 (0-1，值越低价格敏感度越高)
+function calculatePriceElasticity(orders) {
+    // 如果订单少于2个，无法计算弹性，返回中等值
+    if (!orders || orders.length < 2) {
+        return 0.5;
+    }
+    
+    // 计算订单金额的标准差
+    const amounts = orders.map(o => o.totalAmount);
+    const avgAmount = amounts.reduce((a, b) => a + b, 0) / amounts.length;
+    const variance = amounts.reduce((a, b) => a + Math.pow(b - avgAmount, 2), 0) / amounts.length;
+    const stdDeviation = Math.sqrt(variance);
+    
+    // 标准差与平均值的比率 (变异系数)
+    const variationCoeff = stdDeviation / avgAmount;
+    
+    // 变异系数越大，说明价格弹性越高(价格敏感度越高)
+    // 将变异系数映射到0-1区间，并反转，使得结果值越低表示价格敏感度越高
+    return Math.max(0, Math.min(1, 1 - Math.min(variationCoeff, 1)));
+}
+
+// 计算用户流失风险 (0-100，值越高表示风险越大)
+function calculateChurnRisk(daysFromLastPurchase, purchaseFrequency) {
+    // 如果没有购买过，设定较高的风险
+    if (daysFromLastPurchase === null) {
+        return 70;
+    }
+    
+    let riskScore = 0;
+    
+    // 根据最后购买时间计算基础风险分
+    if (daysFromLastPurchase <= 30) {
+        riskScore += 10; // 最近一个月内购买，风险低
+    } else if (daysFromLastPurchase <= 90) {
+        riskScore += 30; // 1-3个月内购买，风险中等
+    } else if (daysFromLastPurchase <= 180) {
+        riskScore += 60; // 3-6个月内购买，风险较高
+    } else {
+        riskScore += 80; // 超过6个月未购买，风险很高
+    }
+    
+    // 根据购买频率调整风险分
+    switch(purchaseFrequency) {
+        case 'high':
+            riskScore -= 20; // 高频购买用户流失风险降低
+            break;
+        case 'medium':
+            riskScore -= 10; // 中频购买用户流失风险略微降低
+            break;
+        case 'low':
+            riskScore += 10; // 低频购买用户流失风险增加
+            break;
+    }
+    
+    // 确保分数在0-100之间
+    return Math.min(Math.max(Math.round(riskScore), 0), 100);
+}

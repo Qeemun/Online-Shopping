@@ -248,11 +248,10 @@ function loadLoginLogs(page = 1) {
             updateLoginStats(data);
             
             // 渲染日志数据
-            data.data.forEach(log => {
-                const row = document.createElement('tr');
+            data.data.forEach(log => {                const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${log.userId}</td>
-                    <td>${log.user ? log.user.username : '未知用户'}</td>
+                    <td>${log.users ? log.users.username : '未知用户'}</td>
                     <td>${log.role}</td>
                     <td>${log.action === 'login' ? '登录' : '注销'}</td>
                     <td>${formatDateTime(log.timestamp || log.createdAt)}</td>
@@ -361,10 +360,9 @@ function loadAdminLogs(page = 1) {
                 const statusBadge = log.status ? 
                     `<span class="status-badge status-${log.status === 'success' ? 'success' : 'failed'}">${log.status === 'success' ? '成功' : '失败'}</span>` : 
                     '-';
-                
-                row.innerHTML = `
+                  row.innerHTML = `
                     <td>${log.accountId}</td>
-                    <td>${log.user ? log.user.username : '未知用户'}</td>
+                    <td>${log.users ? log.users.username : '未知用户'}</td>
                     <td>${log.role}</td>
                     <td class="truncate-text" title="${log.action}">${log.action}</td>
                     <td>${log.module || '-'}</td>

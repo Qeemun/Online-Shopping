@@ -286,3 +286,42 @@ button:hover {
     background-color: #2196F3;
     color: white;
 }
+
+/* 商品状态样式 */
+.status-active {
+    display: inline-block;
+    padding: 3px 8px;
+    background-color: #dff0d8;
+    color: #3c763d;
+    border-radius: 15px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.status-discontinued {
+    display: inline-block;
+    padding: 3px 8px;
+    background-color: #f2dede;
+    color: #a94442;
+    border-radius: 15px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* 操作按钮样式增强 */
+.btn-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.btn-warning:hover {
+    background-color: #e0a800;
+}
+
+.btn-success {
+    background-color: #28a745;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+}

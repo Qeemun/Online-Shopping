@@ -1,37 +1,7 @@
 const db = require('../models');
 const User = db.User;
 const Product = db.Product;
-
-// 创建一个新的活动日志模型
-const ProductViewLog = db.sequelize.define('ProductViewLog', {
-    userId: {
-        type: db.Sequelize.INTEGER,
-        allowNull: false,
-        references: {
-            model: 'users',
-            key: 'id'
-        }
-    },
-    productId: {
-        type: db.Sequelize.INTEGER,
-        allowNull: false,
-        references: {
-            model: 'products',
-            key: 'id'
-        }
-    },
-    durationSeconds: {
-        type: db.Sequelize.INTEGER,
-        allowNull: false
-    },
-    timestamp: {
-        type: db.Sequelize.DATE,
-        defaultValue: db.Sequelize.NOW
-    }
-}, {
-    // 删除自定义表名，使用Sequelize默认的驼峰命名规则
-    timestamps: true
-});
+const ProductViewLog = db.ProductViewLog;
 
 // 记录产品浏览时间
 exports.logProductView = async (req, res) => {
@@ -91,11 +61,11 @@ exports.logProductView = async (req, res) => {
 exports.getUserProductViews = async (req, res) => {
     try {
         const userId = req.params.userId || req.userId;
-        
-        const logs = await ProductViewLog.findAll({
+          const logs = await ProductViewLog.findAll({
             where: { userId },
             include: [{
                 model: Product,
+                as: 'product',
                 attributes: ['id', 'name', 'price', 'category']
             }],
             order: [['createdAt', 'DESC']],

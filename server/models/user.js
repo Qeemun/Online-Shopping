@@ -16,6 +16,7 @@ module.exports = (sequelize) => {
       User.hasMany(models.Order, { foreignKey: 'userId', as: 'orders' });
       User.hasOne(models.UserProfile, { foreignKey: 'userId', as: 'profile' });
       User.hasMany(models.Recommendation, { foreignKey: 'userId' });
+      User.hasMany(models.ProductViewLog, { foreignKey: 'userId', as: 'productViewLogs' });
     }
   }
   User.init({

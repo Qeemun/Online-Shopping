@@ -51,6 +51,17 @@ router.get('/conversion-report/:categoryId', adminAuth, salesStatsController.get
 // 获取库存预警报告
 router.get('/inventory-alerts', adminAuth, salesStatsController.getInventoryAlerts);
 
+// 获取类别销售业绩数据 - 为产品销售监控页面添加
+router.get('/categories/performance', adminAuth, async (req, res) => {
+  return salesStatsController.getCategoryPerformanceForSales(req, res);
+});
+
+// 预测商品销售趋势
+router.get('/products/:productId/predict-sales', adminAuth, salesStatsController.predictProductSalesTrend);
+
+// 评估类别销售趋势
+router.get('/categories/:categoryId/evaluate-trend', adminAuth, salesStatsController.evaluateCategorySalesTrend);
+
 /**
  * 日志查询路由
  */

@@ -133,13 +133,12 @@ class LogController {
       
       // 执行分页查询
       const offset = (page - 1) * limit;
-      
-      const logs = await db.ActivityLog.findAndCountAll({
+        const logs = await db.ActivityLog.findAndCountAll({
         where,
         include: [
           {
             model: db.User,
-            as: 'user',
+            as: 'users', // 修改别名为'users'以匹配模型定义
             attributes: ['id', 'username', 'email', 'role']
           }
         ],
@@ -213,8 +212,7 @@ class LogController {
       
       // 执行分页查询
       const offset = (page - 1) * limit;
-      
-      const logs = await db.sequelize.models.ProductViewLog.findAndCountAll({
+        const logs = await db.ProductViewLog.findAndCountAll({
         where,
         include: [
           {
@@ -225,7 +223,7 @@ class LogController {
           {
             model: db.Product,
             as: 'product',
-            attributes: ['id', 'name', 'categoryId', 'price']
+            attributes: ['id', 'name', 'category', 'price']
           }
         ],
         order: [['createdAt', 'DESC']],
@@ -319,8 +317,7 @@ class LogController {
       
       // 执行分页查询
       const offset = (page - 1) * limit;
-      
-      const logs = await db.sequelize.models.ProductViewLog.findAndCountAll({
+        const logs = await db.ProductViewLog.findAndCountAll({
         where,
         include: [
           {
@@ -331,7 +328,7 @@ class LogController {
           {
             model: db.Product,
             as: 'product',
-            attributes: ['id', 'name', 'categoryId', 'price']
+            attributes: ['id', 'name', 'category', 'price']
           }
         ],
         order: [['createdAt', 'DESC']],
@@ -423,12 +420,11 @@ class LogController {
                 attributes: ['id', 'username', 'email']
               }
             ]
-          },
-          {
+          },          {
             model: db.Product,
             as: 'product',
             where: Object.keys(productWhere).length > 0 ? productWhere : undefined,
-            attributes: ['id', 'name', 'categoryId', 'price']
+            attributes: ['id', 'name', 'category', 'price']
           }
         ],
         order: [['createdAt', 'DESC']],
@@ -554,11 +550,10 @@ class LogController {
                 attributes: ['id', 'username', 'email']
               }
             ]
-          },
-          {
+          },          {
             model: db.Product,
             as: 'product',
-            attributes: ['id', 'name', 'categoryId', 'price']
+            attributes: ['id', 'name', 'category', 'price']
           }
         ],
         order: [['createdAt', 'DESC']],
@@ -578,7 +573,7 @@ class LogController {
         orderDate: item.order.createdAt,
         productId: item.productId,
         product: item.product,
-        categoryId: item.product.categoryId,
+        category: item.product.category,
         quantity: item.quantity,
         unitPrice: item.price,
         totalAmount: item.price * item.quantity

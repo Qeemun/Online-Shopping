@@ -106,4 +106,85 @@ router.get('/logs/activity', salesAuth, async (req, res) => {
   return logController.getActivityLogs(req, res);
 });
 
+// 预测商品销售趋势 (仅限销售人员负责的产品)
+router.get('/products/:productId/predict-sales', salesAuth, async (req, res) => {
+  const { productId } = req.params;
+  const salesId = req.user.id;
+  
+  try {
+    // 检查产品是否由该销售人员负责
+    const assignment = await db.SalesProductAssignment.findOne({
+      where: { salesId, productId }
+    });
+    
+    // 如果没有分配关系，则禁止访问
+    if (!assignment) {
+      return res.status(403).json({
+        success: false,
+        message: '您没有权限访问此产品的销售预测'
+      });
+    }
+    
+    // 如果有权限，调用预测控制器
+    return salesStatsController.predictProductSalesTrend(req, res);
+  } catch (error) {
+    console.error('检查产品访问权限失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '检查产品访问权限失败',
+      error: error.message
+    });
+  }
+});
+
+// 评估销售人员负责的类别销售趋势
+router.get('/categories/:categoryId/evaluate-trend', salesAuth, async (req, res) => {
+  const { categoryId } = req.params;
+  const salesId = req.user.id;
+  
+  try {
+    // 获取类别名称
+    const categoryName = await CategoryHelper.getCategoryName(categoryId);
+    if (!categoryName) {
+      return res.status(404).json({
+        success: false,
+        message: '类别不存在'
+      });
+    }
+    
+    // 检查该销售人员是否负责此类别下的产品
+    const products = await db.Product.findAll({
+      where: { category: categoryName },
+      attributes: ['id']
+    });
+    
+    const productIds = products.map(p => p.id);
+    
+    const assignments = await db.SalesProductAssignment.findAll({
+      where: { 
+        salesId, 
+        productId: { [Op.in]: productIds }
+      }
+    });
+    
+    // 如果没有分配关系，则禁止访问
+    if (assignments.length === 0) {
+      return res.status(403).json({
+        success: false,
+        message: '您没有权限访问此类别的销售趋势'
+      });
+    }
+    
+    // 如果有权限，调用评估控制器
+    return salesStatsController.evaluateCategorySalesTrend(req, res);
+  } catch (error) {
+    console.error('检查类别访问权限失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '检查类别访问权限失败',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

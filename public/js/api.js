@@ -39,10 +39,10 @@ const orderApi = {
     update: (id) => `${API_BASE_URL}/api/orders/${id}`
 };
 
-// 用户活动日志API - 修正API路径，使用users路由下的activity-logs接口
+// 用户活动日志API - 使用用户路由下的activity-logs接口
 const activityApi = {
     userLogs: (userId) => `${API_BASE_URL}/api/users/${userId}/activity-logs`,
-    addLog: `${API_BASE_URL}/api/users/activity-logs`,
+    addLog: `${API_BASE_URL}/api/users/activity-logs`,  // 恢复正确的API路径
     productStats: (productId) => `${API_BASE_URL}/api/products/${productId}/stats`
 };
 
@@ -115,21 +115,40 @@ const api = {
 // 记录用户停留时间
 function logProductViewDuration(productId, durationSeconds) {
     const user = localStorage.getItem('user');
-    // 如果用户未登录，不记录活动
+    // 如果用户未登录或没有产品ID，不记录活动
     if (!user || !productId) return Promise.resolve();
 
     try {
-        const userId = JSON.parse(user)?.id;
+        const userData = JSON.parse(user);
+        const userId = userData?.id;
         if (!userId) return Promise.resolve();
 
-        return fetchApi(api.activity.addLog, {
+        console.log('准备发送浏览记录:', {userId, productId, durationSeconds});
+        
+        // 使用表单数据发送请求
+        return fetch(api.activity.addLog, {
             method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
             body: JSON.stringify({
                 userId,
                 productId,
                 durationSeconds
             })
-        }).catch(err => {
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP错误! 状态: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('浏览记录已保存:', data);
+            return data;
+        })
+        .catch(err => {
             console.error('记录产品停留时间失败:', err);
             // 返回已解决的Promise以避免未处理的拒绝
             return Promise.resolve();

@@ -1123,6 +1123,479 @@ class SalesStatsController {
       });
     }
   }
+
+  /**
+   * 预测商品销售趋势
+   * @param {Object} req - 请求对象
+   * @param {Object} res - 响应对象
+   */
+  async predictProductSalesTrend(req, res) {
+    try {
+      const { productId } = req.params;
+      const { period = 'daily', futureMonths = 3 } = req.query;
+      
+      // 验证产品是否存在
+      const product = await db.Product.findByPk(productId);
+      if (!product) {
+        return res.status(404).json({
+          success: false,
+          message: '产品不存在'
+        });
+      }
+      
+      // 获取历史销售数据
+      // 使用至少6个月的数据来预测未来
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      
+      const orderItems = await db.OrderItem.findAll({
+        where: {
+          productId,
+          createdAt: { [Op.gte]: sixMonthsAgo }
+        },
+        include: [{
+          model: db.Order,
+          as: 'order',
+          where: { status: 'completed' },
+          attributes: ['createdAt']
+        }]
+      });
+      
+      // 如果历史数据太少，无法进行可靠预测
+      if (orderItems.length < 10) {
+        return res.status(200).json({
+          success: true,
+          message: '历史数据不足，无法进行可靠预测',
+          data: {
+            product,
+            historicalSales: [],
+            prediction: []
+          }
+        });
+      }
+      
+      // 按时间段汇总历史销售数据
+      const salesByTimePeriod = {};
+      
+      orderItems.forEach(item => {
+        const orderDate = new Date(item.order.createdAt);
+        let key;
+        
+        if (period === 'daily') {
+          // 每日格式: YYYY-MM-DD
+          key = orderDate.toISOString().split('T')[0];
+        } else if (period === 'weekly') {
+          // 获取周的第一天 (周一)
+          const day = orderDate.getDay(); // 0 = 周日, 1-6 = 周一至周六
+          const diff = orderDate.getDate() - day + (day === 0 ? -6 : 1);
+          const weekStart = new Date(orderDate.setDate(diff));
+          key = weekStart.toISOString().split('T')[0];
+        } else {
+          // 每月格式: YYYY-MM
+          key = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}`;
+        }
+        
+        if (!salesByTimePeriod[key]) {
+          salesByTimePeriod[key] = {
+            period: key,
+            quantity: 0,
+            revenue: 0
+          };
+        }
+        
+        salesByTimePeriod[key].quantity += item.quantity;
+        salesByTimePeriod[key].revenue += parseFloat(item.price) * item.quantity;
+      });
+      
+      // 转换为数组并按时间排序
+      const historicalSales = Object.values(salesByTimePeriod).sort((a, b) => a.period.localeCompare(b.period));
+      
+      // 使用简单移动平均法预测未来销量
+      const futurePredictions = [];
+      
+      // 计算过去几个周期的平均销量
+      const recentPeriods = Math.min(historicalSales.length, 6); // 使用最近6个周期或可用的周期数
+      let sumQuantity = 0;
+      let sumRevenue = 0;
+      
+      for (let i = historicalSales.length - recentPeriods; i < historicalSales.length; i++) {
+        sumQuantity += historicalSales[i].quantity;
+        sumRevenue += historicalSales[i].revenue;
+      }
+      
+      const avgQuantity = sumQuantity / recentPeriods;
+      const avgRevenue = sumRevenue / recentPeriods;
+      
+      // 计算销量的季节性因子 (如果有足够数据)
+      let seasonalFactors = {};
+      let hasSeasonality = false;
+      
+      // 需要至少一年的数据才能检测季节性
+      if (historicalSales.length >= 12) {
+        // 按月计算季节性因子
+        let monthlyData = {};
+        historicalSales.forEach(sale => {
+          const month = sale.period.substring(5, 7); // 获取月份部分
+          if (!monthlyData[month]) {
+            monthlyData[month] = { total: 0, count: 0 };
+          }
+          monthlyData[month].total += sale.quantity;
+          monthlyData[month].count += 1;
+        });
+        
+        // 计算每个月的平均销量
+        for (const month in monthlyData) {
+          monthlyData[month].average = monthlyData[month].total / monthlyData[month].count;
+        }
+        
+        // 计算所有月份的总平均值
+        const allMonthsAvg = Object.values(monthlyData).reduce((sum, data) => sum + data.average, 0) / Object.keys(monthlyData).length;
+        
+        // 计算每个月的季节性因子
+        for (const month in monthlyData) {
+          seasonalFactors[month] = monthlyData[month].average / allMonthsAvg;
+        }
+        
+        hasSeasonality = true;
+      }
+      
+      // 生成未来预测
+      const lastDate = new Date(historicalSales[historicalSales.length - 1].period);
+      
+      for (let i = 1; i <= futureMonths * (period === 'monthly' ? 1 : (period === 'weekly' ? 4 : 30)); i++) {
+        let nextDate = new Date(lastDate);
+        
+        // 根据周期设置下一个日期
+        if (period === 'daily') {
+          nextDate.setDate(nextDate.getDate() + i);
+        } else if (period === 'weekly') {
+          nextDate.setDate(nextDate.getDate() + (i * 7));
+        } else {
+          nextDate.setMonth(nextDate.getMonth() + i);
+        }
+        
+        let predictedQuantity = avgQuantity;
+        let predictedRevenue = avgRevenue;
+        
+        // 应用季节性因子 (如果有)
+        if (hasSeasonality) {
+          const month = String(nextDate.getMonth() + 1).padStart(2, '0');
+          const factor = seasonalFactors[month] || 1;
+          predictedQuantity *= factor;
+          predictedRevenue *= factor;
+        }
+        
+        // 应用趋势分析: 如果有持续上升或下降趋势，进行调整
+        if (historicalSales.length >= 3) {
+          // 计算最近3个周期的平均增长率
+          const growth = [];
+          for (let j = historicalSales.length - 3; j < historicalSales.length - 1; j++) {
+            const earlier = historicalSales[j].quantity;
+            const later = historicalSales[j + 1].quantity;
+            
+            if (earlier > 0) {
+              growth.push((later - earlier) / earlier);
+            }
+          }
+          
+          if (growth.length > 0) {
+            const avgGrowth = growth.reduce((sum, rate) => sum + rate, 0) / growth.length;
+            // 应用增长率，但限制其影响
+            const growthFactor = Math.max(0.9, Math.min(1.1, 1 + (avgGrowth * 0.5 * i / 12)));
+            predictedQuantity *= growthFactor;
+            predictedRevenue *= growthFactor;
+          }
+        }
+        
+        // 格式化日期为字符串
+        let periodStr;
+        if (period === 'daily') {
+          periodStr = nextDate.toISOString().split('T')[0];
+        } else if (period === 'weekly') {
+          periodStr = nextDate.toISOString().split('T')[0];
+        } else {
+          periodStr = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`;
+        }
+        
+        futurePredictions.push({
+          period: periodStr,
+          quantity: Math.round(predictedQuantity),
+          revenue: parseFloat(predictedRevenue.toFixed(2))
+        });
+      }
+      
+      res.status(200).json({
+        success: true,
+        data: {
+          product: {
+            id: product.id,
+            name: product.name,
+            category: product.category,
+            currentPrice: parseFloat(product.price),
+            currentStock: product.stock
+          },
+          historicalSales: historicalSales,
+          prediction: futurePredictions
+        }
+      });
+    } catch (error) {
+      console.error('预测商品销售趋势失败:', error);
+      res.status(500).json({
+        success: false,
+        message: '预测商品销售趋势失败',
+        error: error.message
+      });
+    }
+  }
+  
+  /**
+   * 评估类别销售趋势
+   * @param {Object} req - 请求对象
+   * @param {Object} res - 响应对象
+   */
+  async evaluateCategorySalesTrend(req, res) {
+    try {
+      const { categoryId } = req.params;
+      const { period = 'monthly' } = req.query;
+      
+      // 获取类别信息
+      const categoryName = await CategoryHelper.getCategoryName(categoryId);
+      if (!categoryName) {
+        return res.status(404).json({
+          success: false,
+          message: '类别不存在'
+        });
+      }
+      
+      // 获取该类别下的所有产品
+      const products = await db.Product.findAll({
+        where: { category: categoryName },
+        attributes: ['id', 'name', 'price', 'stock']
+      });
+      
+      if (products.length === 0) {
+        return res.status(200).json({
+          success: true,
+          message: '该类别下没有产品',
+          data: {
+            categoryId,
+            categoryName,
+            trendAnalysis: [],
+            growthRate: 0,
+            projection: []
+          }
+        });
+      }
+      
+      const productIds = products.map(p => p.id);
+      
+      // 获取过去12个月的销售数据
+      const twelveMonthsAgo = new Date();
+      twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+      
+      const orderItems = await db.OrderItem.findAll({
+        where: {
+          productId: { [Op.in]: productIds },
+          createdAt: { [Op.gte]: twelveMonthsAgo }
+        },
+        include: [{
+          model: db.Order,
+          as: 'order',
+          where: { status: 'completed' },
+          attributes: ['createdAt']
+        }]
+      });
+      
+      // 按时间段汇总销售数据
+      const salesByPeriod = {};
+      
+      orderItems.forEach(item => {
+        const date = new Date(item.order.createdAt);
+        let key;
+        
+        if (period === 'weekly') {
+          // 计算周的开始日期
+          const day = date.getDay();
+          const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+          const weekStart = new Date(date);
+          weekStart.setDate(diff);
+          key = weekStart.toISOString().split('T')[0];
+        } else if (period === 'daily') {
+          key = date.toISOString().split('T')[0];
+        } else {
+          // 月度数据
+          key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        }
+        
+        if (!salesByPeriod[key]) {
+          salesByPeriod[key] = {
+            period: key,
+            quantity: 0,
+            revenue: 0,
+            orderCount: 0
+          };
+        }
+        
+        salesByPeriod[key].quantity += item.quantity;
+        salesByPeriod[key].revenue += parseFloat(item.price) * item.quantity;
+        salesByPeriod[key].orderCount += 1;
+      });
+      
+      // 转换为数组并排序
+      const trendData = Object.values(salesByPeriod).sort((a, b) => a.period.localeCompare(b.period));
+      
+      // 如果没有足够的数据，返回空结果
+      if (trendData.length < 2) {
+        return res.status(200).json({
+          success: true,
+          message: '历史数据不足，无法分析趋势',
+          data: {
+            categoryId,
+            categoryName,
+            trendAnalysis: trendData,
+            growthRate: 0,
+            projection: []
+          }
+        });
+      }
+      
+      // 计算增长率
+      const growth = {};
+      
+      // 收入增长率
+      const firstRevenuePoint = trendData[0].revenue;
+      const lastRevenuePoint = trendData[trendData.length - 1].revenue;
+      growth.revenue = firstRevenuePoint > 0 
+        ? ((lastRevenuePoint - firstRevenuePoint) / firstRevenuePoint) 
+        : 0;
+      
+      // 数量增长率
+      const firstQuantityPoint = trendData[0].quantity;
+      const lastQuantityPoint = trendData[trendData.length - 1].quantity;
+      growth.quantity = firstQuantityPoint > 0 
+        ? ((lastQuantityPoint - firstQuantityPoint) / firstQuantityPoint) 
+        : 0;
+      
+      // 订单数增长率
+      const firstOrderPoint = trendData[0].orderCount;
+      const lastOrderPoint = trendData[trendData.length - 1].orderCount;
+      growth.orders = firstOrderPoint > 0 
+        ? ((lastOrderPoint - firstOrderPoint) / firstOrderPoint) 
+        : 0;
+      
+      // 预测未来3个周期的销售数据
+      const projection = [];
+      const lastPeriodData = trendData[trendData.length - 1];
+      
+      // 计算最近几个周期的平均值
+      const recentPeriodsCount = Math.min(trendData.length, 3);
+      let sumQuantity = 0, sumRevenue = 0, sumOrders = 0;
+      
+      for (let i = trendData.length - recentPeriodsCount; i < trendData.length; i++) {
+        sumQuantity += trendData[i].quantity;
+        sumRevenue += trendData[i].revenue;
+        sumOrders += trendData[i].orderCount;
+      }
+      
+      const avgQuantity = sumQuantity / recentPeriodsCount;
+      const avgRevenue = sumRevenue / recentPeriodsCount;
+      const avgOrders = sumOrders / recentPeriodsCount;
+      
+      // 计算最近几个周期的平均增长率
+      let avgQuantityGrowth = 0;
+      let avgRevenueGrowth = 0;
+      let avgOrdersGrowth = 0;
+      
+      if (trendData.length >= 3) {
+        let quantityGrowths = [];
+        let revenueGrowths = [];
+        let orderGrowths = [];
+        
+        for (let i = trendData.length - recentPeriodsCount; i < trendData.length - 1; i++) {
+          const earlier = trendData[i];
+          const later = trendData[i + 1];
+          
+          if (earlier.quantity > 0) 
+            quantityGrowths.push((later.quantity - earlier.quantity) / earlier.quantity);
+          
+          if (earlier.revenue > 0) 
+            revenueGrowths.push((later.revenue - earlier.revenue) / earlier.revenue);
+          
+          if (earlier.orderCount > 0) 
+            orderGrowths.push((later.orderCount - earlier.orderCount) / earlier.orderCount);
+        }
+        
+        if (quantityGrowths.length > 0)
+          avgQuantityGrowth = quantityGrowths.reduce((sum, g) => sum + g, 0) / quantityGrowths.length;
+        
+        if (revenueGrowths.length > 0)
+          avgRevenueGrowth = revenueGrowths.reduce((sum, g) => sum + g, 0) / revenueGrowths.length;
+        
+        if (orderGrowths.length > 0)
+          avgOrdersGrowth = orderGrowths.reduce((sum, g) => sum + g, 0) / orderGrowths.length;
+      }
+      
+      // 预测未来3个周期
+      const lastPeriod = lastPeriodData.period;
+      for (let i = 1; i <= 3; i++) {
+        let nextDate;
+        
+        if (period === 'weekly') {
+          nextDate = new Date(lastPeriod);
+          nextDate.setDate(nextDate.getDate() + (7 * i));
+        } else if (period === 'daily') {
+          nextDate = new Date(lastPeriod);
+          nextDate.setDate(nextDate.getDate() + i);
+        } else {
+          // 月度数据
+          const [year, month] = lastPeriod.split('-').map(Number);
+          nextDate = new Date(year, month - 1 + i, 1);
+        }
+        
+        // 格式化下一个周期的日期
+        let nextPeriod;
+        if (period === 'daily' || period === 'weekly') {
+          nextPeriod = nextDate.toISOString().split('T')[0];
+        } else {
+          nextPeriod = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`;
+        }
+        
+        // 应用增长率进行预测
+        const predictedQuantity = avgQuantity * Math.pow(1 + avgQuantityGrowth, i);
+        const predictedRevenue = avgRevenue * Math.pow(1 + avgRevenueGrowth, i);
+        const predictedOrders = avgOrders * Math.pow(1 + avgOrdersGrowth, i);
+        
+        projection.push({
+          period: nextPeriod,
+          quantity: Math.round(predictedQuantity),
+          revenue: parseFloat(predictedRevenue.toFixed(2)),
+          orderCount: Math.round(predictedOrders)
+        });
+      }
+      
+      res.status(200).json({
+        success: true,
+        data: {
+          categoryId: parseInt(categoryId),
+          categoryName,
+          trendAnalysis: trendData,
+          growth: {
+            quantity: parseFloat(growth.quantity.toFixed(4)),
+            revenue: parseFloat(growth.revenue.toFixed(4)),
+            orders: parseFloat(growth.orders.toFixed(4))
+          },
+          projection
+        }
+      });
+    } catch (error) {
+      console.error('评估类别销售趋势失败:', error);
+      res.status(500).json({
+        success: false,
+        message: '评估类别销售趋势失败',
+        error: error.message
+      });
+    }
+  }
 }
 
 module.exports = new SalesStatsController();

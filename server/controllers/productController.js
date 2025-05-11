@@ -271,23 +271,21 @@ exports.deleteProduct = async (req, res) => {
                 where: { productId: productId },
                 transaction
             });
-        }
-
-        // 4. 检查并处理订单项关联（如果存在）
+        }        // 4. 检查是否存在与此产品相关的订单项
         const OrderItem = db.sequelize.models.OrderItem;
         if (OrderItem) {
-            // 对于订单项，我们可以选择软删除（将productId设为null）或者硬删除
-            // 这里选择软删除，保留订单历史记录
-            await OrderItem.update(
-                { 
-                    productId: null,
-                    productName: `已删除商品(原ID:${productId})` 
-                },
-                { 
-                    where: { productId: productId },
-                    transaction 
-                }
-            );
+            const orderItems = await OrderItem.findAll({
+                where: { productId: productId }
+            });
+            
+            if (orderItems && orderItems.length > 0) {
+                // 存在相关订单项，不能简单删除产品
+                await transaction.rollback();
+                return res.status(400).json({
+                    success: false,
+                    message: '无法删除此产品，因为它已经被包含在订单中。请考虑将其标记为停售而不是删除。'
+                });
+            }
         }
 
         // 5. 最后删除产品本身
@@ -589,6 +587,46 @@ exports.updateCategory = async (req, res) => {
         res.status(500).json({
             success: false,
             message: '更新类别失败',
+            error: error.message
+        });
+    }
+};
+
+// 修改产品状态（活跃/停售）
+exports.updateProductStatus = async (req, res) => {
+    const productId = req.params.productId;
+    const { status } = req.body;
+    
+    // 验证状态值
+    if (!status || !['active', 'discontinued'].includes(status)) {
+        return res.status(400).json({
+            success: false,
+            message: '无效的产品状态。允许的值: active, discontinued'
+        });
+    }
+    
+    try {
+        const product = await Product.findByPk(productId);
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                message: '产品未找到'
+            });
+        }
+        
+        // 更新产品状态
+        await product.update({ status });
+        
+        res.status(200).json({
+            success: true,
+            message: `产品状态已更新为 ${status}`,
+            product
+        });
+    } catch (error) {
+        console.error('更新产品状态失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '更新产品状态失败',
             error: error.message
         });
     }

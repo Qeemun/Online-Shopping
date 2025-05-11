@@ -18,6 +18,9 @@ router.put('/:productId', verifyToken(), productController.upload.single('image'
 // 删除产品
 router.delete('/:productId', verifyToken(), productController.deleteProduct);
 
+// 更新产品状态（活跃/停售）
+router.patch('/:productId/status', verifyToken(), productController.updateProductStatus);
+
 // 获取所有商品类别
 router.get('/categories/all', productController.getAllCategories);
 

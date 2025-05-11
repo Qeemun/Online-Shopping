@@ -404,9 +404,9 @@ function loadPurchaseLogs(page = 1) {
                     <td>${log.user ? log.user.username : '未知用户'}</td>
                     <td>${log.product ? log.product.name : '未知商品'}</td>
                     <td>${log.product ? log.product.category : '未知类别'}</td>
-                    <td>¥${log.unitPrice.toFixed(2)}</td>
+                    <td>¥${typeof log.unitPrice === 'number' ? log.unitPrice.toFixed(2) : log.unitPrice}</td>
                     <td>${log.quantity}</td>
-                    <td>¥${log.totalAmount.toFixed(2)}</td>
+                    <td>¥${typeof log.totalAmount === 'number' ? log.totalAmount.toFixed(2) : log.totalAmount}</td>
                     <td>${formatDateTime(log.orderDate)}</td>
                 `;
                 tableBody.appendChild(row);
@@ -446,8 +446,11 @@ function updatePurchaseStats(data) {
     const uniqueUsers = new Set(data.data.map(log => log.userId)).size;
     document.getElementById('unique-users-purchase').textContent = uniqueUsers;
     
-    // 计算总销售额
-    const totalAmount = data.data.reduce((sum, log) => sum + log.totalAmount, 0);
+    // 计算总销售额 - 确保值是数字类型
+    const totalAmount = data.data.reduce((sum, log) => {
+        const amount = typeof log.totalAmount === 'number' ? log.totalAmount : parseFloat(log.totalAmount) || 0;
+        return sum + amount;
+    }, 0);
     document.getElementById('total-amount').textContent = `¥${totalAmount.toFixed(2)}`;
 }
 

@@ -10,7 +10,9 @@
     <link rel="stylesheet" href="css/unified-dashboard.css">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/productSalesMonitor.css">
-    <!-- 引入Chart.js -->    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="css/anomalyMonitor.css">
+    <!-- 引入Chart.js -->    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- 先引入工具类 -->
     <script src="js/salesUtils.js"></script>
     <script src="js/categoryUtils.js"></script>
@@ -172,62 +174,26 @@
             </div>
         </section>
 
-        <!-- 实时监控 -->
-        <section id="realtime-monitor">
-            <h2>商品销售实时监控</h2>
-            
-            <div class="filter-bar">
-                <div class="filter-group">
-                    <label for="category-filter">商品类别:</label>
-                    <select id="category-filter">
-                        <option value="">所有类别</option>
-                        <!-- 类别选项将动态加载 -->
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="status-filter">库存状态:</label>
-                    <select id="status-filter">
-                        <option value="">所有状态</option>
-                        <option value="normal">库存正常</option>
-                        <option value="warning">库存不足</option>
-                        <option value="danger">紧急补货</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="chart-container">
-                <canvas id="sales-chart"></canvas>
-            </div>
-            
-            <div class="table-container">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>商品名称</th>
-                            <th>类别</th>
-                            <th>已售数量</th>
-                            <th>库存数量</th>
-                            <th>状态</th>
-                            <th>最近销售</th>
-                        </tr>
-                    </thead>
-                    <tbody id="product-status-body">
-                        <!-- 产品状态数据将动态加载 -->
-                        <tr>
-                            <td colspan="6" class="text-center">加载中...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
+        
     </main>
 
     <!-- Footer -->
     <footer>
-        <p>&copy; 2024 牧燕小站</p>
-    </footer>
-
-    <!-- 引入页面特定脚本 -->
+        <p>&copy; 2025 牧燕小站</p>
+    </footer>    <!-- 引入页面特定脚本 -->
     <script src="js/productSalesMonitor.js"></script>
+    
+    <!-- 异常详情模态框模板 -->
+    <div id="anomaly-modal-template" style="display: none;">
+        <div class="anomaly-modal">
+            <div class="anomaly-modal-content">
+                <span class="close-btn">&times;</span>
+                <h3 id="anomaly-title">异常详情</h3>
+                <div id="anomaly-details-content" class="anomaly-details">
+                    <!-- 异常详情将由JavaScript动态填充 -->
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

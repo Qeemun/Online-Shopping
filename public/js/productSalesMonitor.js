@@ -17,6 +17,28 @@ let charts = {
 // 添加salesData全局变量，避免undefined错误
 let salesData = [];
 
+// 定义销售异常检测标准
+const anomalyThresholds = {
+    // 库存警戒线
+    lowStockThreshold: 5,       // 库存低于此值视为紧急库存
+    criticalStockThreshold: 2,  // 库存低于此值视为严重紧急
+
+    // 销售额异常阈值 (相对于历史平均值的百分比变化)
+    salesSpikeThreshold: 0.5,   // 销售额上升50%视为异常增长
+    salesDropThreshold: 0.4,    // 销售额下降40%视为异常下降
+    
+    // 销量异常阈值
+    quantitySpikeThreshold: 0.6,  // 销量上升60%视为异常增长
+    quantityDropThreshold: 0.5,   // 销量下降50%视为异常下降
+    
+    // 转化率异常阈值
+    conversionRateDropThreshold: 0.3,  // 转化率下降30%视为异常
+    
+    // 平均价格异常阈值
+    priceDropThreshold: 0.2,    // 平均价格下降20%视为异常
+    priceRiseThreshold: 0.25    // 平均价格上升25%视为异常
+};
+
 // 日志函数
 function logMessage(message, type = 'info') {
     const timestamp = new Date().toISOString();
@@ -73,8 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 初始化类别筛选器
     loadCategories();
     
-    // 初始加载实时监控数据
-    loadProducts();
+   
 });
 
 // 显示特定视图并隐藏其他视图
@@ -231,10 +252,6 @@ function handleScroll() {
     const scrollPosition = window.innerHeight + window.scrollY;
     const bodyHeight = document.body.offsetHeight;
     
-    // 当滚动到距离底部200px时，加载更多数据
-    if (scrollPosition >= bodyHeight - 200) {
-        loadMoreProducts();
-    }
 }
 
 // 加载所有商品 (初始加载)
@@ -850,17 +867,20 @@ async function loadCategorySalesPerformance() {
     
     const startDate = document.getElementById('start-date').value;
     const endDate = document.getElementById('end-date').value;
-    
-    try {
+      try {
         // 构建请求URL
-        let apiUrl = 'http://localhost:3000/api/sales/categories/performance';
+        let apiUrl;
         const params = new URLSearchParams();
         
         if (startDate) params.append('startDate', startDate);
         if (endDate) params.append('endDate', endDate);
         
-        // 如果是销售人员，只查询其负责的类别
-        if (user.role === 'sales') {
+        // 根据角色使用不同的API端点
+        if (user.role === 'admin') {
+            apiUrl = 'http://localhost:3000/api/admin/categories/performance';
+            logMessage('管理员模式: 使用管理员API', 'info');
+        } else {
+            apiUrl = 'http://localhost:3000/api/sales/categories/performance';
             params.append('salesId', user.id);
             logMessage(`销售人员模式: 添加销售ID ${user.id} 到请求`, 'info');
         }
@@ -1070,11 +1090,24 @@ function displayCategoryPerformance(categoryData, isStaffView = false) {
     const quantities = [];
     const stocks = [];
     
-    // 填充表格并收集图表数据
+    // 收集所有异常
+    const allAnomalies = [];
+      // 填充表格并收集图表数据
     categoryData.forEach(category => {
         // 使用categoryUtils获取类别ID (如果尚未添加)
         if (!category.categoryId && categoryUtils.initialized) {
             category.categoryId = categoryUtils.getCategoryId(category.category);
+        }
+        
+        // 检测该类别的异常 (传入历史数据, 如果存在)
+        let categoryAnomalies = [];
+        if (window.categoryHistoricalData && window.categoryHistoricalData[category.category]) {
+            categoryAnomalies = detectCategoryAnomalies(category, window.categoryHistoricalData[category.category]);
+        }
+        
+        // 添加到全局异常列表
+        if (categoryAnomalies.length > 0) {
+            allAnomalies.push(...categoryAnomalies);
         }
         
         const row = document.createElement('tr');
@@ -1088,14 +1121,29 @@ function displayCategoryPerformance(categoryData, isStaffView = false) {
         const soldQty = category.soldQuantity || category.salesQuantity || 0;  
         const stockQty = category.stockQuantity || category.currentStock || 0;
         
+        // 添加异常指示器
+        const hasAnomalies = categoryAnomalies.length > 0;
+        const anomalyIndicator = hasAnomalies ? 
+            `<span class="anomaly-indicator ${categoryAnomalies.some(a => a.severity === 'high') ? 'high' : 'warning'}" 
+                  data-category="${category.category}">⚠</span>` : '';
+        
         row.innerHTML = `
-            <td>${category.category || '未分类'}</td>
+            <td>${category.category || '未分类'} ${anomalyIndicator}</td>
             <td>¥${category.totalRevenue.toFixed(2)}</td>
             <td>${category.orderCount}</td>
             <td>${soldQty}</td>
             <td>¥${avgOrderValue}</td>
             <td>${stockQty}</td>
         `;
+        
+        // 如果有异常，添加点击事件查看详情
+        if (hasAnomalies) {
+            row.classList.add('has-anomalies');
+            row.addEventListener('click', () => {
+                // 显示该类别的所有异常
+                displaySalesAnomalies(categoryAnomalies);
+            });
+        }
         
         targetTableBody.appendChild(row);
         
@@ -1105,9 +1153,13 @@ function displayCategoryPerformance(categoryData, isStaffView = false) {
         quantities.push(soldQty);
         stocks.push(stockQty);
     });
-    
-    // 更新图表
+      // 更新图表
     updateCategoryCharts(categories, revenues, quantities, stocks, isStaffView);
+    
+    // 如果有异常，显示异常警报
+    if (allAnomalies.length > 0) {
+        displaySalesAnomalies(allAnomalies);
+    }
 }
 
 // 更新类别相关的图表
@@ -1219,5 +1271,620 @@ function displayStockStatus(stockStatus) {
         charts.categorystockchartChart.data.labels = categories;
         charts.categorystockchartChart.data.datasets[0].data = stocks;
         charts.categorystockchartChart.update();
+    }
+}
+
+/**
+ * 检测销售异常
+ * @param {Object} product - 产品数据对象
+ * @param {Array} historicalData - 历史销售数据
+ * @returns {Array} 检测到的异常列表
+ */
+function detectSalesAnomalies(product, historicalData = []) {
+    const anomalies = [];
+    
+    // 1. 检测库存异常
+    if (product.stock <= anomalyThresholds.criticalStockThreshold) {
+        anomalies.push({
+            type: 'critical_stock',
+            severity: 'high',
+            message: `严重库存警告：${product.name} 库存仅剩 ${product.stock} 件`,
+            product: product
+        });
+    } else if (product.stock <= anomalyThresholds.lowStockThreshold) {
+        anomalies.push({
+            type: 'low_stock',
+            severity: 'medium',
+            message: `库存警告：${product.name} 库存仅剩 ${product.stock} 件`,
+            product: product
+        });
+    }
+    
+    // 如果有历史数据，进行销售异常检测
+    if (historicalData && historicalData.length >= 2) {
+        // 获取最新两个时间段的数据进行比较
+        const current = historicalData[historicalData.length - 1];
+        const previous = historicalData[historicalData.length - 2];
+        
+        // 2. 检测销售额异常
+        if (previous.revenue > 0) {
+            const revenueChange = (current.revenue - previous.revenue) / previous.revenue;
+            
+            if (revenueChange >= anomalyThresholds.salesSpikeThreshold) {
+                anomalies.push({
+                    type: 'sales_spike',
+                    severity: 'info',
+                    message: `销售额突增：${product.name} 销售额上涨了 ${Math.round(revenueChange * 100)}%`,
+                    product: product,
+                    data: { current: current.revenue, previous: previous.revenue, change: revenueChange }
+                });
+            } else if (revenueChange <= -anomalyThresholds.salesDropThreshold) {
+                anomalies.push({
+                    type: 'sales_drop',
+                    severity: 'warning',
+                    message: `销售额下降：${product.name} 销售额下降了 ${Math.round(Math.abs(revenueChange) * 100)}%`,
+                    product: product,
+                    data: { current: current.revenue, previous: previous.revenue, change: revenueChange }
+                });
+            }
+        }
+        
+        // 3. 检测销量异常
+        if (previous.quantity > 0) {
+            const quantityChange = (current.quantity - previous.quantity) / previous.quantity;
+            
+            if (quantityChange >= anomalyThresholds.quantitySpikeThreshold) {
+                anomalies.push({
+                    type: 'quantity_spike',
+                    severity: 'info',
+                    message: `销量激增：${product.name} 销量增加了 ${Math.round(quantityChange * 100)}%`,
+                    product: product,
+                    data: { current: current.quantity, previous: previous.quantity, change: quantityChange }
+                });
+            } else if (quantityChange <= -anomalyThresholds.quantityDropThreshold) {
+                anomalies.push({
+                    type: 'quantity_drop',
+                    severity: 'warning',
+                    message: `销量下降：${product.name} 销量下降了 ${Math.round(Math.abs(quantityChange) * 100)}%`,
+                    product: product,
+                    data: { current: current.quantity, previous: previous.quantity, change: quantityChange }
+                });
+            }
+        }
+        
+        // 4. 检测转化率异常 (如果有浏览数据)
+        if (current.views && previous.views && previous.views > 0 && previous.quantity > 0) {
+            const currentConversion = current.quantity / current.views;
+            const previousConversion = previous.quantity / previous.views;
+            
+            if (previousConversion > 0) {
+                const conversionChange = (currentConversion - previousConversion) / previousConversion;
+                
+                if (conversionChange <= -anomalyThresholds.conversionRateDropThreshold) {
+                    anomalies.push({
+                        type: 'conversion_drop',
+                        severity: 'warning',
+                        message: `转化率下降：${product.name} 转化率下降了 ${Math.round(Math.abs(conversionChange) * 100)}%`,
+                        product: product,
+                        data: { current: currentConversion, previous: previousConversion, change: conversionChange }
+                    });
+                }
+            }
+        }
+        
+        // 5. 检测平均价格异常
+        if (previous.quantity > 0 && current.quantity > 0) {
+            const currentAvgPrice = current.revenue / current.quantity;
+            const previousAvgPrice = previous.revenue / previous.quantity;
+            
+            if (previousAvgPrice > 0) {
+                const priceChange = (currentAvgPrice - previousAvgPrice) / previousAvgPrice;
+                
+                if (priceChange <= -anomalyThresholds.priceDropThreshold) {
+                    anomalies.push({
+                        type: 'price_drop',
+                        severity: 'warning',
+                        message: `价格下降：${product.name} 平均售价下降了 ${Math.round(Math.abs(priceChange) * 100)}%`,
+                        product: product,
+                        data: { current: currentAvgPrice, previous: previousAvgPrice, change: priceChange }
+                    });
+                } else if (priceChange >= anomalyThresholds.priceRiseThreshold) {
+                    anomalies.push({
+                        type: 'price_rise',
+                        severity: 'info',
+                        message: `价格上升：${product.name} 平均售价上升了 ${Math.round(priceChange * 100)}%`,
+                        product: product,
+                        data: { current: currentAvgPrice, previous: previousAvgPrice, change: priceChange }
+                    });
+                }
+            }
+        }
+    }
+    
+    return anomalies;
+}
+
+/**
+ * 检测类别销售异常
+ * @param {Object} categoryData - 类别销售数据
+ * @param {Array} historicalData - 历史销售数据
+ * @returns {Array} 检测到的异常列表
+ */
+function detectCategoryAnomalies(categoryData, historicalData = []) {
+    const anomalies = [];
+    
+    // 如果没有足够的历史数据进行比较，返回空数组
+    if (!historicalData || historicalData.length < 2) {
+        return anomalies;
+    }
+    
+    // 获取最新两个时间段的数据进行比较
+    const current = historicalData[historicalData.length - 1];
+    const previous = historicalData[historicalData.length - 2];
+    
+    // 1. 检测类别销售额异常
+    if (previous.totalRevenue > 0) {
+        const revenueChange = (current.totalRevenue - previous.totalRevenue) / previous.totalRevenue;
+        
+        if (revenueChange >= anomalyThresholds.salesSpikeThreshold) {
+            anomalies.push({
+                type: 'category_revenue_spike',
+                severity: 'info',
+                message: `类别销售额激增：${categoryData.category} 销售额上涨了 ${Math.round(revenueChange * 100)}%`,
+                category: categoryData.category,
+                data: { current: current.totalRevenue, previous: previous.totalRevenue, change: revenueChange }
+            });
+        } else if (revenueChange <= -anomalyThresholds.salesDropThreshold) {
+            anomalies.push({
+                type: 'category_revenue_drop',
+                severity: 'warning',
+                message: `类别销售额下降：${categoryData.category} 销售额下降了 ${Math.round(Math.abs(revenueChange) * 100)}%`,
+                category: categoryData.category,
+                data: { current: current.totalRevenue, previous: previous.totalRevenue, change: revenueChange }
+            });
+        }
+    }
+    
+    // 2. 检测类别销量异常
+    if (previous.soldQuantity > 0) {
+        const quantityChange = (current.soldQuantity - previous.soldQuantity) / previous.soldQuantity;
+        
+        if (quantityChange >= anomalyThresholds.quantitySpikeThreshold) {
+            anomalies.push({
+                type: 'category_quantity_spike',
+                severity: 'info',
+                message: `类别销量激增：${categoryData.category} 销量增加了 ${Math.round(quantityChange * 100)}%`,
+                category: categoryData.category,
+                data: { current: current.soldQuantity, previous: previous.soldQuantity, change: quantityChange }
+            });
+        } else if (quantityChange <= -anomalyThresholds.quantityDropThreshold) {
+            anomalies.push({
+                type: 'category_quantity_drop',
+                severity: 'warning',
+                message: `类别销量下降：${categoryData.category} 销量下降了 ${Math.round(Math.abs(quantityChange) * 100)}%`,
+                category: categoryData.category,
+                data: { current: current.soldQuantity, previous: previous.soldQuantity, change: quantityChange }
+            });
+        }
+    }
+    
+    // 3. 检测类别库存异常
+    // 计算当前库存与销量的比例
+    if (current.soldQuantity > 0) {
+        const stockToSalesRatio = categoryData.stockQuantity / current.soldQuantity;
+        
+        if (stockToSalesRatio < 2) { // 库存不足以支撑2个时间单位的销售
+            anomalies.push({
+                type: 'category_low_stock',
+                severity: 'high',
+                message: `类别库存警告：${categoryData.category} 当前库存仅能支撑 ${stockToSalesRatio.toFixed(1)} 个周期的销售`,
+                category: categoryData.category,
+                data: { stock: categoryData.stockQuantity, sales: current.soldQuantity, ratio: stockToSalesRatio }
+            });
+        }
+    }
+    
+    return anomalies;
+}
+
+/**
+ * 显示销售异常警报
+ * @param {Array} anomalies - 检测到的异常列表
+ */
+function displaySalesAnomalies(anomalies) {
+    // 获取或创建异常警报容器
+    let anomalyContainer = document.getElementById('anomaly-alerts');
+    if (!anomalyContainer) {
+        anomalyContainer = document.createElement('div');
+        anomalyContainer.id = 'anomaly-alerts';
+        anomalyContainer.className = 'anomaly-alerts-container';
+        
+        // 添加标题
+        const title = document.createElement('h3');
+        title.textContent = '销售异常监控';
+        anomalyContainer.appendChild(title);
+        
+        // 将容器添加到页面
+        const mainContent = document.querySelector('main') || document.body;
+        mainContent.insertBefore(anomalyContainer, mainContent.firstChild);
+    }
+    
+    // 清除旧的警报
+    const alertList = anomalyContainer.querySelector('.anomaly-list') || document.createElement('div');
+    alertList.className = 'anomaly-list';
+    alertList.innerHTML = '';
+    
+    // 如果没有异常，显示正常状态
+    if (anomalies.length === 0) {
+        const normalItem = document.createElement('div');
+        normalItem.className = 'anomaly-item normal';
+        normalItem.innerHTML = '<span class="status">✓</span> 所有指标正常';
+        alertList.appendChild(normalItem);
+    } else {
+        // 按严重程度排序
+        const severityOrder = { high: 0, warning: 1, medium: 2, info: 3 };
+        anomalies.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
+        
+        // 添加异常警报
+        anomalies.forEach(anomaly => {
+            const anomalyItem = document.createElement('div');
+            anomalyItem.className = `anomaly-item ${anomaly.severity}`;
+            
+            // 设置图标
+            let icon;
+            switch (anomaly.severity) {
+                case 'high': icon = '⚠️'; break;
+                case 'warning': icon = '⚠'; break;
+                case 'medium': icon = '⚠'; break;
+                case 'info': icon = 'ℹ️'; break;
+                default: icon = '•';
+            }
+            
+            anomalyItem.innerHTML = `<span class="status">${icon}</span> ${anomaly.message}`;
+            
+            // 添加详情按钮
+            if (anomaly.data) {
+                const detailsBtn = document.createElement('button');
+                detailsBtn.className = 'details-btn';
+                detailsBtn.textContent = '详情';
+                detailsBtn.onclick = () => showAnomalyDetails(anomaly);
+                anomalyItem.appendChild(detailsBtn);
+            }
+            
+            alertList.appendChild(anomalyItem);
+        });
+    }
+    
+    // 确保警报列表在容器中
+    if (!anomalyContainer.contains(alertList)) {
+        anomalyContainer.appendChild(alertList);
+    }
+    
+    // 显示异常数量
+    const countBadge = document.querySelector('.anomaly-count') || document.createElement('div');
+    countBadge.className = 'anomaly-count';
+    
+    const highSeverity = anomalies.filter(a => a.severity === 'high').length;
+    if (highSeverity > 0) {
+        countBadge.textContent = highSeverity;
+        countBadge.classList.add('critical');
+    } else if (anomalies.length > 0) {
+        countBadge.textContent = anomalies.length;
+        countBadge.classList.remove('critical');
+    } else {
+        countBadge.textContent = '0';
+        countBadge.classList.remove('critical');
+    }
+    
+    // 确保计数徽章在容器中
+    if (!anomalyContainer.contains(countBadge)) {
+        anomalyContainer.insertBefore(countBadge, anomalyContainer.firstChild);
+    }
+}
+
+/**
+ * 显示异常详情
+ * @param {Object} anomaly - 异常对象
+ */
+function showAnomalyDetails(anomaly) {
+    // 使用模板创建模态对话框
+    const template = document.getElementById('anomaly-modal-template');
+    if (!template) {
+        console.error('异常详情模板不存在');
+        return;
+    }
+
+    // 复制模板
+    const modal = template.cloneNode(true);
+    modal.id = '';
+    modal.style.display = 'block';
+    
+    // 获取模态内容元素
+    const modalContent = modal.querySelector('.anomaly-modal-content');
+    const closeBtn = modal.querySelector('.close-btn');
+    const title = modal.querySelector('#anomaly-title');
+    
+    // 设置关闭按钮事件
+    closeBtn.onclick = () => document.body.removeChild(modal);
+    
+    // 设置标题
+    title.textContent = getAnomalyTitle(anomaly.type);
+    
+    // 添加内容
+    const content = document.createElement('div');
+    content.className = 'anomaly-details';
+    
+    // 根据异常类型生成详细信息
+    let detailsHTML = `<p>${anomaly.message}</p>`;
+    
+    if (anomaly.data) {
+        detailsHTML += `<div class="data-comparison">
+            <div class="data-item">
+                <span class="data-label">当前值:</span>
+                <span class="data-value">${formatValue(anomaly.data.current, anomaly.type)}</span>
+            </div>
+            <div class="data-item">
+                <span class="data-label">上一周期:</span>
+                <span class="data-value">${formatValue(anomaly.data.previous, anomaly.type)}</span>
+            </div>
+            <div class="data-item ${anomaly.data.change >= 0 ? 'increase' : 'decrease'}">
+                <span class="data-label">变化率:</span>
+                <span class="data-value">${(anomaly.data.change * 100).toFixed(2)}%</span>
+            </div>
+        </div>`;
+        
+        // 添加图表容器
+        detailsHTML += '<div class="chart-container"><canvas id="anomaly-chart"></canvas></div>';
+    }
+    
+    // 添加建议
+    detailsHTML += `<div class="recommendations">
+        <h4>建议操作:</h4>
+        <ul>
+            ${getAnomalyRecommendations(anomaly).map(rec => `<li>${rec}</li>`).join('')}
+        </ul>
+    </div>`;
+    
+    content.innerHTML = detailsHTML;
+    
+    // 组装模态框
+    modalContent.appendChild(closeBtn);
+    modalContent.appendChild(title);
+    modalContent.appendChild(content);
+    modal.appendChild(modalContent);
+    
+    // 添加到页面
+    document.body.appendChild(modal);
+    
+    // 如果有数据，绘制图表
+    if (anomaly.data) {
+        setTimeout(() => {
+            const ctx = document.getElementById('anomaly-chart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['上一周期', '当前周期'],
+                    datasets: [{
+                        label: getAnomalyMetricLabel(anomaly.type),
+                        data: [anomaly.data.previous, anomaly.data.current],
+                        backgroundColor: [
+                            'rgba(54, 162, 235, 0.5)',
+                            anomaly.data.change >= 0 ? 'rgba(75, 192, 192, 0.5)' : 'rgba(255, 99, 132, 0.5)'
+                        ],
+                        borderColor: [
+                            'rgba(54, 162, 235, 1)',
+                            anomaly.data.change >= 0 ? 'rgba(75, 192, 192, 1)' : 'rgba(255, 99, 132, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }, 100);
+    }
+}
+
+// 辅助函数：根据异常类型获取标题
+function getAnomalyTitle(type) {
+    const titles = {
+        'critical_stock': '严重库存不足警告',
+        'low_stock': '库存不足警告',
+        'sales_spike': '销售额异常增长',
+        'sales_drop': '销售额异常下降',
+        'quantity_spike': '销量异常增长',
+        'quantity_drop': '销量异常下降',
+        'conversion_drop': '转化率下降',
+        'price_drop': '价格下跌',
+        'price_rise': '价格上涨',
+        'category_revenue_spike': '类别销售额激增',
+        'category_revenue_drop': '类别销售额下降',
+        'category_quantity_spike': '类别销量激增',
+        'category_quantity_drop': '类别销量下降',
+        'category_low_stock': '类别库存不足'
+    };
+    
+    return titles[type] || '销售异常警报';
+}
+
+// 辅助函数：根据异常类型获取度量标签
+function getAnomalyMetricLabel(type) {
+    if (type.includes('revenue')) return '销售额';
+    if (type.includes('quantity')) return '销量';
+    if (type.includes('price')) return '价格';
+    if (type.includes('conversion')) return '转化率';
+    if (type.includes('stock')) return '库存';
+    return '数值';
+}
+
+// 辅助函数：格式化数值
+function formatValue(value, type) {
+    if (type.includes('revenue') || type.includes('price')) {
+        return `¥${value.toFixed(2)}`;
+    }
+    if (type.includes('conversion')) {
+        return `${(value * 100).toFixed(2)}%`;
+    }
+    return value.toString();
+}
+
+// 辅助函数：根据异常类型获取建议
+function getAnomalyRecommendations(anomaly) {
+    const recommendations = {
+        'critical_stock': [
+            '紧急补充库存，立即联系供应商',
+            '考虑调高价格以减缓销售速度',
+            '为顾客提供替代产品建议'
+        ],
+        'low_stock': [
+            '检查供应链，补充库存',
+            '调整库存预警水平',
+            '分析产品需求预测，提前备货'
+        ],
+        'sales_spike': [
+            '分析销售激增原因（促销、季节性、外部事件等）',
+            '评估是否需要增加库存以满足需求',
+            '考虑是否调整价格策略以最大化利润'
+        ],
+        'sales_drop': [
+            '分析销售下降原因（竞争、季节性、产品问题等）',
+            '考虑促销活动以刺激销售',
+            '检查产品质量和客户反馈',
+            '评估是否需要调整价格或产品定位'
+        ],
+        'quantity_spike': [
+            '确保有足够库存满足增长的需求',
+            '分析是什么因素导致销量激增',
+            '考虑相似产品是否也应该增加库存'
+        ],
+        'quantity_drop': [
+            '检查产品是否存在问题或负面评价',
+            '考虑产品促销或捆绑销售',
+            '评估产品的市场定位是否需要调整'
+        ],
+        'conversion_drop': [
+            '检查产品页面是否存在技术问题',
+            '分析用户行为，找出转化障碍',
+            '考虑改进产品展示或描述',
+            '评估价格竞争力'
+        ],
+        'price_drop': [
+            '分析价格下降对销量的影响',
+            '评估是否需要调整定价策略',
+            '检查是否有竞争对手降价'
+        ],
+        'price_rise': [
+            '分析价格上升对销量的影响',
+            '评估客户接受度',
+            '监控转化率变化'
+        ],
+        'category_revenue_spike': [
+            '分析类别销售增长的主要贡献产品',
+            '评估是否需要增加该类别的库存',
+            '考虑扩大该类别的产品线'
+        ],
+        'category_revenue_drop': [
+            '识别类别销售下降的主要问题产品',
+            '分析竞争情况和市场趋势',
+            '考虑类别促销活动或产品更新'
+        ],
+        'category_quantity_spike': [
+            '确保类别内所有产品有足够库存',
+            '分析热销产品特点，应用到其他产品',
+            '评估是否扩大该类别的营销预算'
+        ],
+        'category_quantity_drop': [
+            '检查类别产品是否存在共性问题',
+            '评估类别市场需求变化',
+            '考虑调整产品组合或促销策略'
+        ],
+        'category_low_stock': [
+            '紧急补充类别内关键产品库存',
+            '评估供应链效率',
+            '调整类别库存管理策略'
+        ]
+    };
+    
+    return recommendations[anomaly.type] || ['分析异常原因', '制定相应的调整策略'];
+}
+
+/**
+ * 加载类别历史销售数据
+ * @param {string} categoryId - 类别ID
+ * @param {number} days - 天数
+ * @returns {Promise} - 返回Promise对象
+ */
+async function loadHistoricalCategoryData(categoryId, days = 30) {
+    try {
+        const url = `/api/sales/category/${categoryId}/history?days=${days}`;
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`请求失败: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        // 确保全局历史数据对象存在
+        if (!window.categoryHistoricalData) {
+            window.categoryHistoricalData = {};
+        }
+        
+        // 按类别名称存储历史数据
+        if (data.category && data.historyData) {
+            window.categoryHistoricalData[data.category] = data.historyData;
+        }
+        
+        return data;
+    } catch (error) {
+        logMessage(`加载类别历史数据失败: ${error.message}`, 'error');
+        return null;
+    }
+}
+
+/**
+ * 批量加载所有类别的历史销售数据
+ * @param {Array} categories - 类别列表
+ * @param {number} days - 天数
+ */
+async function loadAllCategoriesHistoricalData(categories, days = 30) {
+    if (!categories || categories.length === 0) return;
+    
+    // 创建全局历史数据对象（如果不存在）
+    if (!window.categoryHistoricalData) {
+        window.categoryHistoricalData = {};
+    }
+    
+    // 批量请求所有类别的历史数据
+    try {
+        const categoryIds = categories.map(c => c.categoryId).filter(id => id);
+        const url = `/api/sales/categories/history?ids=${categoryIds.join(',')}&days=${days}`;
+        
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`请求失败: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        // 处理返回的数据
+        if (data && Array.isArray(data)) {
+            data.forEach(item => {
+                if (item.category && item.historyData) {
+                    window.categoryHistoricalData[item.category] = item.historyData;
+                }
+            });
+            
+            logMessage(`已加载 ${data.length} 个类别的历史数据`, 'info');
+        }
+    } catch (error) {
+        logMessage(`批量加载类别历史数据失败: ${error.message}`, 'error');
     }
 }

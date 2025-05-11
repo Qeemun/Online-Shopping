@@ -1,0 +1,339 @@
+/**
+ * 销售异常监控样式
+ * 用于产品销售监控页面的异常检测和显示
+ */
+
+/* 实时监控状态指示器 */
+.realtime-status {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+    font-size: 14px;
+    background-color: #f8f9fa;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.realtime-status .status-icon {
+    margin-right: 10px;
+    font-size: 12px;
+}
+
+.realtime-status.active .status-icon {
+    color: #28a745;
+}
+
+.realtime-status.inactive .status-icon {
+    color: #6c757d;
+}
+
+.realtime-status.loading .status-icon {
+    color: #007bff;
+    animation: spin 1s infinite linear;
+}
+
+.realtime-status.error .status-icon {
+    color: #dc3545;
+}
+
+.realtime-status .last-update-time {
+    margin-left: auto;
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.realtime-status .control-btn {
+    margin-left: 10px;
+    padding: 2px 8px;
+    font-size: 12px;
+    border-radius: 3px;
+    background-color: #f0f0f0;
+    border: 1px solid #ddd;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.realtime-status .control-btn:hover {
+    background-color: #e0e0e0;
+}
+
+/* 监控控制按钮 */
+.monitor-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+/* 异常警报容器 */
+.anomaly-alerts-container {
+    margin: 20px 0;
+    padding: 15px;
+    border-radius: 6px;
+    background-color: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-left: 4px solid #17a2b8;
+}
+
+.anomaly-alerts-container h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 18px;
+    color: #212529;
+    display: flex;
+    align-items: center;
+}
+
+.anomaly-alerts-container h3:before {
+    content: "⚠";
+    margin-right: 10px;
+    color: #dc3545;
+}
+
+/* 异常计数徽章 */
+.anomaly-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: #17a2b8;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    margin-left: 10px;
+}
+
+.anomaly-count.critical {
+    background-color: #dc3545;
+    animation: pulse 2s infinite;
+}
+
+/* 异常列表 */
+.anomaly-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* 异常项 */
+.anomaly-item {
+    padding: 10px 12px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    border-left: 3px solid transparent;
+    background-color: rgba(0,0,0,0.02);
+    transition: all 0.2s;
+}
+
+.anomaly-item:hover {
+    background-color: rgba(0,0,0,0.04);
+}
+
+.anomaly-item .status {
+    margin-right: 10px;
+    font-size: 16px;
+}
+
+.anomaly-item.high {
+    border-left-color: #dc3545;
+    background-color: rgba(220,53,69,0.05);
+}
+
+.anomaly-item.warning {
+    border-left-color: #ffc107;
+    background-color: rgba(255,193,7,0.05);
+}
+
+.anomaly-item.medium {
+    border-left-color: #fd7e14;
+    background-color: rgba(253,126,20,0.05);
+}
+
+.anomaly-item.info {
+    border-left-color: #17a2b8;
+    background-color: rgba(23,162,184,0.05);
+}
+
+.anomaly-item.normal {
+    border-left-color: #28a745;
+    background-color: rgba(40,167,69,0.05);
+}
+
+/* 异常详情按钮 */
+.details-btn {
+    margin-left: auto;
+    padding: 3px 8px;
+    font-size: 12px;
+    border: none;
+    border-radius: 3px;
+    background-color: #e9ecef;
+    color: #495057;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.details-btn:hover {
+    background-color: #dee2e6;
+}
+
+/* 异常指示器 */
+.anomaly-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    margin-left: 5px;
+    font-size: 12px;
+    color: white;
+}
+
+.anomaly-indicator.high {
+    background-color: #dc3545;
+}
+
+.anomaly-indicator.warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+/* 包含异常的表格行 */
+.has-anomalies {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.has-anomalies:hover {
+    background-color: rgba(0,0,0,0.03);
+}
+
+/* 异常详情模态框 */
+.anomaly-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1050;
+}
+
+.anomaly-modal-content {
+    background-color: white;
+    border-radius: 6px;
+    padding: 20px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    position: relative;
+}
+
+.close-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 24px;
+    cursor: pointer;
+    color: #6c757d;
+    transition: color 0.2s;
+}
+
+.close-btn:hover {
+    color: #343a40;
+}
+
+/* 异常详情内容 */
+.anomaly-details {
+    margin-top: 15px;
+}
+
+/* 数据比较 */
+.data-comparison {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin: 15px 0;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+
+.data-item {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.data-label {
+    font-size: 12px;
+    color: #6c757d;
+    margin-bottom: 4px;
+}
+
+.data-value {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.data-item.increase .data-value {
+    color: #28a745;
+}
+
+.data-item.decrease .data-value {
+    color: #dc3545;
+}
+
+/* 图表容器 */
+.chart-container {
+    margin-top: 20px;
+    height: 200px;
+}
+
+/* 解决建议 */
+.solution-suggestion {
+    margin-top: 20px;
+    padding: 12px 15px;
+    background-color: #e9f7ef;
+    border-left: 4px solid #28a745;
+    border-radius: 0 4px 4px 0;
+}
+
+.solution-suggestion h4 {
+    margin-top: 0;
+    color: #1e7e34;
+    font-size: 16px;
+}
+
+/* 动画 */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .anomaly-alerts-container {
+        padding: 10px;
+    }
+    
+    .data-comparison {
+        flex-direction: column;
+        gap: 10px;
+    }
+}

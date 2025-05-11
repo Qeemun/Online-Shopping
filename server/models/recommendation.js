@@ -5,9 +5,9 @@ module.exports = (sequelize) => {
         static associate(models) {
             Recommendation.belongsTo(models.User, { 
                 foreignKey: 'userId' 
-            });
-            Recommendation.belongsTo(models.Product, { 
-                foreignKey: 'productId' 
+            });            Recommendation.belongsTo(models.Product, { 
+                foreignKey: 'productId',
+                as: 'product'
             });
         }
     }

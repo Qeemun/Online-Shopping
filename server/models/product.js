@@ -1,8 +1,7 @@
 const { Model, DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {
-  class Product extends Model {
-    static associate(models) {
+  class Product extends Model {    static associate(models) {
       Product.hasMany(models.CartItem, {
         foreignKey: 'productId',
         as: 'cartItems'
@@ -14,6 +13,10 @@ module.exports = (sequelize) => {
       Product.hasMany(models.Recommendation, {
         foreignKey: 'productId',
         as: 'recommendations'
+      });
+      Product.hasMany(models.ProductViewLog, {
+        foreignKey: 'productId',
+        as: 'viewLogs'
       });
     }
   }
@@ -43,10 +46,14 @@ module.exports = (sequelize) => {
       allowNull: false,
       defaultValue: 0,
       validate: { min: 0 }
-    },
-    category: {
+    },    category: {
       type: DataTypes.STRING,
       allowNull: true
+    },
+    status: {
+      type: DataTypes.ENUM('active', 'discontinued'),
+      allowNull: false,
+      defaultValue: 'active'
     },
     imageUrl: {
       type: DataTypes.STRING,

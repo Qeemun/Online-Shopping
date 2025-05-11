@@ -273,13 +273,11 @@ async function loadSimilarProducts(productId) {
         
         if (data.success && data.products && data.products.length > 0) {
             const similarProductsHTML = createRecommendationSection('相似商品推荐', data.products);
-            similarProductsSection.innerHTML = similarProductsHTML;
-            
-            // 绑定加入购物车按钮事件
-            similarProductsSection.querySelectorAll('.add-to-cart-btn').forEach(button => {
-                button.addEventListener('click', () => {
-                    const id = button.getAttribute('data-id');
-                    addToCart(id);
+            similarProductsSection.innerHTML = similarProductsHTML;            // 由于移除了加购按钮，不再需要绑定事件
+            // 添加点击计数或其他分析代码（可选）
+            similarProductsSection.querySelectorAll('.view-btn').forEach(link => {
+                link.addEventListener('click', () => {
+                    console.log('用户点击了相似商品:', link.getAttribute('href'));
                 });
             });
         } else {
@@ -303,40 +301,86 @@ async function loadUserRecommendations(currentProductId) {
             return;
         }
         
-        const response = await fetch('http://localhost:3000/api/recommendations/mine', {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        const data = await response.json();
+        console.log('开始加载个性化推荐');
         
-        if (data.success && data.recommendations && data.recommendations.length > 0) {
-            // 过滤掉当前产品
-            const filteredRecommendations = data.recommendations.filter(rec => 
-                rec.product && rec.product.id !== parseInt(currentProductId)
-            ).map(rec => rec.product);
+        // 添加超时控制
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
+        
+        try {
+            const response = await fetch('http://localhost:3000/api/recommendations/mine', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                signal: controller.signal
+            });
             
-            if (filteredRecommendations.length > 0) {
-                const userRecsHTML = createRecommendationSection('为您推荐', filteredRecommendations);
-                personalRecommendationsSection.innerHTML = userRecsHTML;
-                personalRecommendationsSection.style.display = 'block';
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`服务器返回错误: ${response.status} ${response.statusText}`);
+            }
+            
+            const data = await response.json();            console.log('获取推荐数据成功:', data.success);
+            console.log('返回的推荐数据:', JSON.stringify(data, null, 2));
+            
+            if (data.success && data.recommendations && data.recommendations.length > 0) {
+                // 过滤掉当前产品，同时确保每个推荐项都有完整的product字段
+                const filteredRecommendations = data.recommendations
+                    .filter(rec => rec && rec.product && 
+                           rec.product.id && 
+                           rec.product.id !== parseInt(currentProductId))
+                    .map(rec => rec.product);
+                    
+                console.log(`过滤后剩余${filteredRecommendations.length}条推荐`);
                 
-                // 绑定加入购物车按钮事件
-                personalRecommendationsSection.querySelectorAll('.add-to-cart-btn').forEach(button => {
-                    button.addEventListener('click', () => {
-                        const id = button.getAttribute('data-id');
-                        addToCart(id);
+                if (filteredRecommendations.length > 0) {
+                    const userRecsHTML = createRecommendationSection('为您推荐', filteredRecommendations);
+                    personalRecommendationsSection.innerHTML = userRecsHTML;
+                    personalRecommendationsSection.style.display = 'block';
+                    
+                    // 由于移除了加购按钮，不再需要绑定事件
+                    // 添加点击计数或其他分析代码（可选）
+                    personalRecommendationsSection.querySelectorAll('.view-btn').forEach(link => {
+                        link.addEventListener('click', () => {
+                            console.log('用户点击了推荐商品:', link.getAttribute('href'));
+                        });
                     });
-                });
+                } else {
+                    personalRecommendationsSection.style.display = 'none';
+                }
             } else {
+                console.log('未找到个性化推荐数据或数据格式不正确');
                 personalRecommendationsSection.style.display = 'none';
             }
-        } else {
-            personalRecommendationsSection.style.display = 'none';
+        } catch (fetchError) {
+            console.error('获取推荐数据时出错:', fetchError);
         }
     } catch (error) {
         console.error('加载个性化推荐失败:', error);
         personalRecommendationsSection.style.display = 'none';
+        
+        // 检查是否是授权或登录相关的错误
+        let errorMessage = '抱歉，我们暂时无法获取为您定制的商品推荐。';
+        let showLoginButton = false;
+        
+        if (error.message && (error.message.includes('403') || error.message.includes('401') || error.message.includes('授权'))) {
+            errorMessage = '您的登录已过期，请重新登录后查看个性化推荐。';
+            showLoginButton = true;
+        }
+        
+        // 显示友好的错误信息，而不是直接隐藏推荐区域
+        personalRecommendationsSection.innerHTML = `
+            <div class="recommendation-error">
+                <h3>无法加载个性化推荐</h3>
+                <p>${errorMessage}</p>
+                ${showLoginButton 
+                    ? `<button onclick="window.location.href='login.html'">去登录</button>` 
+                    : `<button onclick="loadUserRecommendations('${currentProductId}')">重试</button>`
+                }
+            </div>
+        `;
+        personalRecommendationsSection.style.display = 'block';
     }
 }
 
@@ -357,13 +401,11 @@ async function loadPopularProducts(currentProductId) {
             
             if (filteredPopular.length > 0) {
                 const popularRecsHTML = createRecommendationSection('热门商品', filteredPopular);
-                popularRecommendationsSection.innerHTML = popularRecsHTML;
-                
-                // 绑定加入购物车按钮事件
-                popularRecommendationsSection.querySelectorAll('.add-to-cart-btn').forEach(button => {
-                    button.addEventListener('click', () => {
-                        const id = button.getAttribute('data-id');
-                        addToCart(id);
+                popularRecommendationsSection.innerHTML = popularRecsHTML;                // 由于移除了加购按钮，不再需要绑定事件
+                // 添加点击计数或其他分析代码（可选）
+                popularRecommendationsSection.querySelectorAll('.view-btn').forEach(link => {
+                    link.addEventListener('click', () => {
+                        console.log('用户点击了热门商品:', link.getAttribute('href'));
                     });
                 });
             } else {
@@ -388,23 +430,20 @@ function createRecommendationSection(title, products) {
         if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('/')) {
             imageUrl = '/' + imageUrl;
         }
-        
-        // 将价格转换为数字并格式化（如果是字符串）
+          // 将价格转换为数字并格式化（如果是字符串）
         let price = product.price;
         if (typeof price === 'string') {
             price = parseFloat(price);
         }
         
         const formattedPrice = isNaN(price) ? product.price : price.toFixed(2);
-        
-        return `
+        const displayName = product.name;              return `
             <div class="product-card">
                 <img src="${imageUrl}" alt="${product.name}" onerror="this.src='/images/default-product.png'">
-                <h3>${product.name}</h3>
-                <p class="price">¥${formattedPrice}</p>
+                <h3 title="${product.name}">${displayName}</h3>
+                <p class="price">${formattedPrice}</p>
                 <div class="product-actions">
-                    <a href="productDetails.html?id=${product.id}" class="view-btn">查看详情</a>
-                    <button class="add-to-cart-btn" data-id="${product.id}">加购</button>
+                    <a href="productDetails.html?id=${product.id}" class="view-btn full-width">查看详情</a>
                 </div>
             </div>
         `;
