@@ -4,6 +4,7 @@ const { authenticate, isAdmin } = require('../config/middleware/auth');
 const salesStaffController = require('../controllers/salesStaffController');
 const salesStatsController = require('../controllers/salesStatsController');
 const logController = require('../controllers/logController');
+const adminController = require('../controllers/adminController');
 
 // 组合鉴权和管理员权限检查
 const adminAuth = [authenticate, isAdmin];
@@ -64,5 +65,11 @@ router.get('/logs/product-views', adminAuth, logController.getProductViewLogs);
 
 // 获取购买记录
 router.get('/logs/purchase', adminAuth, logController.getPurchaseLogs);
+
+/**
+ * 管理员仪表板相关路由
+ */
+// 获取管理员仪表板摘要数据
+router.get('/dashboard/summary', adminAuth, adminController.getDashboardSummary);
 
 module.exports = router;

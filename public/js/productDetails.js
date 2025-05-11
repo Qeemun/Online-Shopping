@@ -192,24 +192,22 @@ function displayProductDetails(product) {
 }
 
 // 添加到购物车函数
-function addToCart(productId) {
+function addToCart(productId, quantity = 1) {
     const token = localStorage.getItem('token');
     if (!token) {
         alert('请先登录');
         window.location.href = 'login.html';
         return;
     }
-    
-    // 获取数量
-    let quantity = 1;
-    const quantityInput = document.getElementById('quantity');
-    if (quantityInput) {
-        quantity = parseInt(quantityInput.value, 10);
-        if (isNaN(quantity) || quantity < 1) {
-            quantity = 1;
-        }
+
+    // 显示加载状态
+    const addToCartBtn = document.getElementById('add-to-cart');
+    if (addToCartBtn) {
+        addToCartBtn.disabled = true;
+        addToCartBtn.textContent = '添加中...';
     }
 
+    // 调用API添加到购物车
     fetch('http://localhost:3000/api/cart', {
         method: 'POST',
         headers: {
@@ -218,7 +216,7 @@ function addToCart(productId) {
         },
         body: JSON.stringify({
             productId: parseInt(productId),
-            quantity: quantity
+            quantity: parseInt(quantity)
         })
     })
     .then(response => response.json())
@@ -235,6 +233,13 @@ function addToCart(productId) {
     .catch(error => {
         console.error('添加到购物车失败:', error);
         alert('添加失败，请重试');
+    })
+    .finally(() => {
+        // 恢复按钮状态
+        if (addToCartBtn) {
+            addToCartBtn.disabled = false;
+            addToCartBtn.textContent = '加入购物车';
+        }
     });
 }
 

@@ -4,87 +4,86 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>操作日志 - 在线购物平台</title>
+    <link rel="stylesheet" href="css/variables.css">
     <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/unified-dashboard.css">
+    <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/operationLogs.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
+    <!-- Header -->
     <header>
-        <div class="logo">
-            <a href="index.html">在线购物平台</a>
-        </div>
+        <h1>操作日志</h1>
         <nav>
-            <ul>
-                <li><a href="index.html">首页</a></li>
-                <li id="cart-link" style="display: none;"><a href="cart.html">购物车</a></li>
-                <li id="order-history-link" style="display: none;"><a href="orderHistory.html">订单历史</a></li>
-                <li id="admin-link" style="display: none;"><a href="dashboard.html">管理面板</a></li>
-                <li id="login-link"><a href="login.html">登录</a></li>
-                <li id="register-link"><a href="register.html">注册</a></li>
-                <li id="username" class="username"></li>
-                <li><button id="logout-button" style="display: none;">退出</button></li>
-            </ul>
+            <a href="dashboard.html">返回管理面板</a>
+            <a href="index.html">首页</a>
+            <span id="current-user"></span>
         </nav>
-    </header>
-
-    <div class="dashboard-container">
-        <aside class="sidebar">
-            <h3>管理系统</h3>
-            <ul class="sidebar-menu">
-                <li><a href="dashboard.html"><span class="icon">📊</span> 控制面板</a></li>
-                <li><a href="productSalesMonitor.html"><span class="icon">📈</span> 销售监控</a></li>
-                <li><a href="salesProductLog.html"><span class="icon">📋</span> 产品日志</a></li>
-                <li id="sales-staff-mgmt" style="display: none;"><a href="salesStaffManagement.html"><span class="icon">👥</span> 销售人员管理</a></li>
-                <li id="product-cat-mgmt" style="display: none;"><a href="productCategoryManagement.html"><span class="icon">🗂️</span> 商品类别管理</a></li>
-                <li id="order-mgmt" style="display: none;"><a href="orderManagement.html"><span class="icon">📦</span> 订单管理</a></li>
-                <li id="customer-mgmt" style="display: none;"><a href="customerManagement.html"><span class="icon">👤</span> 客户管理</a></li>
-                <li id="reports-link" style="display: none;"><a href="reports.html"><span class="icon">📝</span> 销售报表</a></li>
-                <li class="active"><a href="operationLogs.html"><span class="icon">🔍</span> 操作日志</a></li>
-            </ul>
-            <div class="sidebar-footer">
-                <p>&copy; 2025 在线购物平台</p>
-            </div>
-        </aside>
-
-        <main class="main-content">
-            <div class="page-header">
-                <h1>系统操作日志</h1>
-                <p class="breadcrumb">首页 / 管理系统 / 操作日志</p>
-            </div>
-
-            <div class="content-wrapper">
-                <div class="filter-panel">
-                    <div class="filter-header">
-                        <h2>过滤条件</h2>
-                        <button id="toggle-filters" class="toggle-btn">▼</button>
-                    </div>
-                    <div id="filter-content" class="filter-content">
-                        <form id="log-filter-form">
+    </header>    
+    
+    <main>
+        <!-- 页面标题 -->
+        <section class="page-header">
+            <h2>操作日志查询</h2>
+            <p class="breadcrumb">首页 / 管理 / 操作日志</p>
+        </section>
+        
+        <div class="content-wrapper">
+            <!-- 左侧导航 -->
+            <aside class="sidebar">
+                <h3>管理系统</h3>
+                <ul class="sidebar-menu">
+                    <li><a href="dashboard.html"><i class="fas fa-tachometer-alt"></i> 控制面板</a></li>
+                    <li><a href="productSalesMonitor.html"><i class="fas fa-chart-line"></i> 销售监控</a></li>
+                    <li><a href="salesProductLog.html"><i class="fas fa-clipboard-list"></i> 产品日志</a></li>
+                    <li id="sales-staff-mgmt" style="display: none;"><a href="salesStaffManagement.html"><i class="fas fa-users"></i> 销售人员管理</a></li>
+                    <li id="product-cat-mgmt" style="display: none;"><a href="productCategoryManagement.html"><i class="fas fa-folder"></i> 商品类别管理</a></li>
+                    <li id="order-mgmt" style="display: none;"><a href="orderManagement.html"><i class="fas fa-box"></i> 订单管理</a></li>
+                    <li id="customer-mgmt" style="display: none;"><a href="customerManagement.html"><i class="fas fa-user"></i> 客户管理</a></li>
+                    <li id="reports-link" style="display: none;"><a href="reports.html"><i class="fas fa-file-alt"></i> 销售报表</a></li>
+                    <li class="active"><a href="operationLogs.html"><i class="fas fa-search"></i> 操作日志</a></li>
+                </ul>
+                <div class="sidebar-footer">
+                    <p>&copy; 2025 在线购物平台</p>
+                </div>
+            </aside>
+            
+            <div class="content-main"><div class="content-main">
+                <!-- 工具栏 -->
+                <section class="toolbar">
+                    <div class="filter-group">
+                        <div class="filter-header">
+                            <h3>过滤条件</h3>
+                            <button id="toggle-filters" class="toggle-btn"><i class="fas fa-chevron-down"></i></button>
+                        </div>
+                        <div id="filter-content" class="filter-content active">                        <form id="log-filter-form" class="filter-form">
                             <div class="filter-row">
                                 <div class="filter-item">
-                                    <label for="log-type">日志类型</label>
-                                    <select id="log-type" name="log-type">
+                                    <label for="log-type">日志类型:</label>
+                                    <select id="log-type" name="log-type" class="form-control">
                                         <option value="all" selected>全部日志</option>
                                         <option value="login">登录日志</option>
                                         <option value="admin">管理操作</option>
                                     </select>
                                 </div>
                                 <div class="filter-item">
-                                    <label for="user-role">用户角色</label>
-                                    <select id="user-role" name="user-role">
+                                    <label for="user-role">用户角色:</label>
+                                    <select id="user-role" name="user-role" class="form-control">
                                         <option value="all" selected>全部角色</option>
                                         <option value="admin">管理员</option>
                                         <option value="sales">销售人员</option>
                                         <option value="customer">客户</option>
                                     </select>
                                 </div>
-                                <div class="filter-item date-range">
-                                    <label>日期范围</label>
+                                <div class="filter-item">
+                                    <label>日期范围:</label>
                                     <div class="date-inputs">
-                                        <input type="date" id="start-date" name="start-date">
+                                        <input type="date" id="start-date" name="start-date" class="form-control">
                                         <span>至</span>
-                                        <input type="date" id="end-date" name="end-date">
+                                        <input type="date" id="end-date" name="end-date" class="form-control">
                                     </div>
                                 </div>
                             </div>

@@ -65,11 +65,13 @@ function initEventListeners() {
             event.target.style.display = 'none';
         }
     });
-    
-    // 批量分配商品按钮事件
+      // 批量分配商品按钮事件
     const batchAssignButton = document.getElementById('batch-assign-button');
     if (batchAssignButton) {
         batchAssignButton.addEventListener('click', function() {
+            // 加载所有可分配的商品
+            loadAllAvailableProducts();
+            // 显示批量分配模态框
             document.getElementById('batch-assign-modal').style.display = 'block';
         });
     }
@@ -120,7 +122,7 @@ async function loadAllAvailableProducts() {
     try {
         const token = localStorage.getItem('token');
         
-        const response = await fetch('http://localhost:3000/api/products', {
+        const response = await fetch('http://localhost:3000/api/products?limit=100', {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -129,35 +131,60 @@ async function loadAllAvailableProducts() {
         });
         
         if (!response.ok) {
-            throw new Error('获取商品列表失败');
+            throw new Error(`获取商品列表失败 (状态码: ${response.status})`);
         }
         
-        const data = await response.json();
+        const productsData = await response.json();
         
-        if (!data.success) {
-            throw new Error(data.message || '获取商品列表失败');
+        if (!productsData.success) {
+            throw new Error(productsData.message || '获取商品列表失败');
         }
         
-        // 填充批量分配的商品多选框
-        populateBatchProductsCheckboxes(data.products);
+        // 获取销售人员列表填充选择框
+        const staffSelect = document.getElementById('staff-for-batch-assign');
+        staffSelect.innerHTML = '<option value="">-- 选择销售人员 --</option>';
+        
+        const staffResponse = await fetch('http://localhost:3000/api/sales-staff', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!staffResponse.ok) {
+            throw new Error('获取销售人员列表失败');
+        }
+        
+        const staffData = await staffResponse.json();
+        
+        if (staffData.success && staffData.salesStaff) {
+            staffData.salesStaff.forEach(staff => {
+                if (staff.isActive !== false) {
+                    const option = document.createElement('option');
+                    option.value = staff.id;
+                    option.textContent = staff.username;
+                    staffSelect.appendChild(option);
+                }
+            });
+        }
+        
+        // 填充商品复选框
+        populateBatchProductsCheckboxes(productsData.products);
+        
     } catch (error) {
-        console.error('加载商品列表出错:', error);
+        console.error('加载可分配商品出错:', error);
+        salesUtils.showNotification(error.message, 'error');
     }
 }
 
 // 填充批量分配的商品选择框
 function populateBatchProductsCheckboxes(products) {
-    const productsContainer = document.getElementById('batch-products-container');
-    if (!productsContainer) return;
+    const container = document.getElementById('batch-products-container');
+    container.innerHTML = '';
     
-    productsContainer.innerHTML = '';
-    
-    if (products.length === 0) {
-        productsContainer.innerHTML = '<p>没有可分配的商品</p>';
+    if (!products || products.length === 0) {
+        container.innerHTML = '<p>没有可分配的商品</p>';
         return;
     }
     
-    // 按类别对商品进行分组
+    // 按类别对商品分组
     const productsByCategory = {};
     products.forEach(product => {
         const category = product.category || '未分类';
@@ -167,48 +194,35 @@ function populateBatchProductsCheckboxes(products) {
         productsByCategory[category].push(product);
     });
     
-    // 创建分组的商品选择框
-    Object.entries(productsByCategory).forEach(([category, categoryProducts]) => {
-        const categoryContainer = document.createElement('div');
-        categoryContainer.className = 'product-category';
+    // 为每个类别创建商品复选框
+    Object.keys(productsByCategory).sort().forEach(category => {
+        const categoryTitle = document.createElement('h4');
+        categoryTitle.textContent = category;
+        container.appendChild(categoryTitle);
         
-        const categoryHeader = document.createElement('h4');
-        categoryHeader.textContent = category;
-        categoryContainer.appendChild(categoryHeader);
+        const productsList = document.createElement('div');
+        productsList.className = 'batch-products-list';
         
-        const productsWrapper = document.createElement('div');
-        productsWrapper.className = 'products-wrapper';
-        
-        categoryProducts.forEach(product => {
-            const productCheckbox = document.createElement('div');
-            productCheckbox.className = 'product-checkbox';
-            productCheckbox.innerHTML = `
-                <input type="checkbox" id="product-${product.id}" name="batch-products" value="${product.id}">
-                <label for="product-${product.id}">${product.name} (¥${product.price})</label>
-            `;
-            productsWrapper.appendChild(productCheckbox);
+        productsByCategory[category].forEach(product => {
+            const productItem = document.createElement('div');
+            productItem.className = 'batch-product-item';
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = `product-${product.id}`;
+            checkbox.value = product.id;
+            checkbox.name = 'batch-products';
+            
+            const label = document.createElement('label');
+            label.htmlFor = `product-${product.id}`;
+            label.textContent = `${product.name} (¥${product.price})`;
+            
+            productItem.appendChild(checkbox);
+            productItem.appendChild(label);
+            productsList.appendChild(productItem);
         });
         
-        categoryContainer.appendChild(productsWrapper);
-        productsContainer.appendChild(categoryContainer);
-    });
-    
-    // 添加类别全选/取消全选的功能
-    const categoryHeaders = document.querySelectorAll('.product-category h4');
-    categoryHeaders.forEach(header => {
-        header.style.cursor = 'pointer';
-        header.addEventListener('click', function() {
-            const productsWrapper = this.nextElementSibling;
-            const checkboxes = productsWrapper.querySelectorAll('input[type=checkbox]');
-            
-            // 检查是否全部选中
-            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-            
-            // 切换状态
-            checkboxes.forEach(cb => {
-                cb.checked = !allChecked;
-            });
-        });
+        container.appendChild(productsList);
     });
 }
 
@@ -219,22 +233,28 @@ function displaySalesStaffList(staffList) {
     
     if (!staffList || staffList.length === 0) {
         const row = document.createElement('tr');
-        row.innerHTML = '<td colspan="5" class="text-center">暂无销售人员</td>';
+        row.innerHTML = '<td colspan="4" class="text-center">暂无销售人员</td>';
         staffTableBody.appendChild(row);
         return;
     }
     
-    staffList.forEach(staff => {
+    // 只显示活跃的销售人员
+    const activeStaff = staffList.filter(staff => staff.isActive !== false);
+    
+    if (activeStaff.length === 0) {
         const row = document.createElement('tr');
-        
-        // 计算已分配商品数量
-        const assignedCount = staff.products ? staff.products.length : 0;
+        row.innerHTML = '<td colspan="4" class="text-center">暂无活跃的销售人员</td>';
+        staffTableBody.appendChild(row);
+        return;
+    }
+    
+    activeStaff.forEach(staff => {
+        const row = document.createElement('tr');
         
         row.innerHTML = `
             <td>${staff.username}</td>
             <td>${staff.email}</td>
-            <td>${formatDateTime(staff.lastLogin || staff.createdAt)}</td>
-            <td>${assignedCount}</td>
+            <td>${formatDateTime(staff.createdAt)}</td>
             <td class="actions">
                 <button class="view-button" onclick="viewSalesStaffProducts(${staff.id})">查看负责商品</button>
                 <button class="reset-button" onclick="resetSalesStaffPassword(${staff.id})">重置密码</button>
@@ -288,7 +308,8 @@ async function addSalesStaff(event) {
         });
         
         if (!response.ok) {
-            throw new Error(`添加销售人员失败 (状态码: ${response.status})`);
+            const errorData = await response.json();
+            throw new Error(errorData.message || `添加销售人员失败 (状态码: ${response.status})`);
         }
         
         const data = await response.json();
@@ -636,7 +657,7 @@ async function assignProductToStaff(event) {
 async function batchAssignProducts(event) {
     event.preventDefault();
     
-    const staffId = document.getElementById('batch-staff-selector').value;
+    const staffId = document.getElementById('staff-for-batch-assign').value;
     const selectedProducts = Array.from(document.querySelectorAll('input[name="batch-products"]:checked')).map(cb => cb.value);
     
     if (!staffId) {
@@ -651,8 +672,7 @@ async function batchAssignProducts(event) {
     
     try {
         const token = localStorage.getItem('token');
-        
-        const response = await fetch(`http://localhost:3000/api/sales-staff/${staffId}/products/batch`, {
+          const response = await fetch(`http://localhost:3000/api/sales-staff/${staffId}/assign-products`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,

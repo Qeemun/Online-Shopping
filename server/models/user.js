@@ -11,16 +11,13 @@ module.exports = (sequelize) => {
     }
     isAdmin() {
       return this.role === 'admin';
-    }
-
-    static associate(models) {
+    }    static associate(models) {
       User.hasMany(models.CartItem, { foreignKey: 'userId', as: 'cartItems' });
       User.hasMany(models.Order, { foreignKey: 'userId', as: 'orders' });
-      User.hasOne(models.UserProfile, { foreignKey: 'userId' });
+      User.hasOne(models.UserProfile, { foreignKey: 'userId', as: 'profile' });
       User.hasMany(models.Recommendation, { foreignKey: 'userId' });
     }
   }
-
   User.init({
     id: {
       type: DataTypes.INTEGER,
@@ -48,6 +45,11 @@ module.exports = (sequelize) => {
       type: DataTypes.ENUM('customer', 'sales', 'admin'),
       allowNull: false,
       defaultValue: 'customer'
+    },
+    isActive: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true
     },
     createdAt: {
       type: DataTypes.DATE,

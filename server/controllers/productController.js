@@ -233,23 +233,76 @@ exports.updateProduct = async (req, res) => {
 // 删除产品
 exports.deleteProduct = async (req, res) => {
     const productId = req.params.productId;
+    // 使用事务确保原子性操作
+    const transaction = await db.sequelize.transaction();
 
     try {
         const product = await Product.findByPk(productId);
         if (!product) {
+            await transaction.rollback();
             return res.status(404).json({
                 success: false,
                 message: '产品未找到'
             });
         }
 
-        await product.destroy();
+        // 1. 删除与产品相关的浏览日志记录
+        const ProductViewLog = db.sequelize.models.ProductViewLog;
+        if (ProductViewLog) {
+            await ProductViewLog.destroy({
+                where: { productId: productId },
+                transaction
+            });
+        }
+
+        // 2. 删除购物车中的相关项目
+        const CartItem = db.CartItem;
+        if (CartItem) {
+            await CartItem.destroy({
+                where: { productId: productId },
+                transaction
+            });
+        }
+
+        // 3. 删除销售人员产品分配记录
+        const SalesProductAssignment = db.sequelize.models.SalesProductAssignment;
+        if (SalesProductAssignment) {
+            await SalesProductAssignment.destroy({
+                where: { productId: productId },
+                transaction
+            });
+        }
+
+        // 4. 检查并处理订单项关联（如果存在）
+        const OrderItem = db.sequelize.models.OrderItem;
+        if (OrderItem) {
+            // 对于订单项，我们可以选择软删除（将productId设为null）或者硬删除
+            // 这里选择软删除，保留订单历史记录
+            await OrderItem.update(
+                { 
+                    productId: null,
+                    productName: `已删除商品(原ID:${productId})` 
+                },
+                { 
+                    where: { productId: productId },
+                    transaction 
+                }
+            );
+        }
+
+        // 5. 最后删除产品本身
+        await product.destroy({ transaction });
+
+        // 提交事务
+        await transaction.commit();
 
         res.status(200).json({
             success: true,
             message: '产品删除成功'
         });
     } catch (error) {
+        // 回滚事务
+        await transaction.rollback();
         console.error('删除产品失败:', error);
         res.status(500).json({
             success: false,
@@ -262,7 +315,16 @@ exports.deleteProduct = async (req, res) => {
 // 获取所有商品类别
 exports.getAllCategories = async (req, res) => {
     try {
-        // 查询所有产品的类别字段
+        // 从categories表中获取所有类别
+        const Category = db.Category;
+        const categoriesData = await Category.findAll({
+            attributes: ['id', 'name']
+        });
+        
+        // 提取类别名称数组
+        const categories = categoriesData.map(category => category.name);
+        
+        // 还需要检查产品表中是否有不在categories表中的类别
         const products = await Product.findAll({
             attributes: ['category'],
             where: {
@@ -272,12 +334,15 @@ exports.getAllCategories = async (req, res) => {
             }
         });
         
-        // 提取唯一的类别
-        const categories = [...new Set(products.map(product => product.category))].filter(Boolean);
+        // 合并并去重，确保没有丢失任何类别
+        const productCategories = [...new Set(products.map(product => product.category))].filter(Boolean);
+        const uniqueCategories = [...new Set([...categories, ...productCategories])];
         
         res.status(200).json({
             success: true,
-            categories
+            categories: uniqueCategories,
+            // 同时提供详细数据以便前端使用
+            categoriesData: categoriesData
         });
     } catch (error) {
         console.error('获取类别列表失败:', error);
@@ -326,32 +391,50 @@ exports.addCategory = async (req, res) => {
             });
         }
         
-        // 检查类别是否已存在
-        const existingProducts = await Product.findAll({
-            where: { category: name },
-            limit: 1
+        // 首先检查category表中是否已存在该类别
+        const Category = db.Category;
+        let existingCategory = await Category.findOne({
+            where: { name }
         });
         
-        if (existingProducts.length > 0) {
+        if (existingCategory) {
             return res.status(400).json({
                 success: false,
                 message: '该类别已存在'
             });
         }
         
-        // 创建一个示例产品作为该类别的第一个产品
-        const placeholderProduct = await Product.create({
-            name: `${name} - 示例产品`,
-            description: description || `${name}类别的示例产品`,
-            price: 0,
-            stock: 0,
-            category: name
+        // 检查产品表中是否已使用该类别名
+        const existingProducts = await Product.findAll({
+            where: { category: name },
+            limit: 1
         });
+        
+        // 创建新类别记录
+        const newCategory = await Category.create({
+            name,
+            // 如果模型支持description字段
+            ...(description && { description })
+        });
+        
+        let placeholderProduct = null;
+        
+        // 如果没有使用该类别的产品，创建一个示例产品
+        if (existingProducts.length === 0) {
+            placeholderProduct = await Product.create({
+                name: `${name} - 示例产品`,
+                description: description || `${name}类别的示例产品`,
+                price: 0,
+                stock: 0,
+                category: name
+            });
+        }
         
         res.status(201).json({
             success: true,
             message: '类别添加成功',
             category: {
+                id: newCategory.id,
                 name,
                 description,
                 firstProduct: placeholderProduct
@@ -377,10 +460,16 @@ exports.deleteCategory = async (req, res) => {
             where: { category }
         });
         
-        if (products.length === 0) {
+        // 首先检查category表中是否存在该类别
+        const Category = db.Category;
+        const categoryRecord = await Category.findOne({
+            where: { name: category }
+        });
+        
+        if (!categoryRecord && products.length === 0) {
             return res.status(404).json({
                 success: false,
-                message: '类别不存在或没有相关商品'
+                message: '类别不存在'
             });
         }
         
@@ -416,6 +505,11 @@ exports.deleteCategory = async (req, res) => {
             { where: { category } }
         );
         
+        // 从categories表中删除类别记录
+        if (categoryRecord) {
+            await categoryRecord.destroy();
+        }
+        
         res.status(200).json({
             success: true,
             message: '类别删除成功',
@@ -426,6 +520,75 @@ exports.deleteCategory = async (req, res) => {
         res.status(500).json({
             success: false,
             message: '删除类别失败',
+            error: error.message
+        });
+    }
+};
+
+// 更新商品类别
+exports.updateCategory = async (req, res) => {
+    try {
+        const { oldName } = req.params;
+        const { name, description } = req.body;
+        
+        if (!name) {
+            return res.status(400).json({
+                success: false,
+                message: '类别名称不能为空'
+            });
+        }
+        
+        // 检查新名称是否已存在（排除自身）
+        if (oldName !== name) {
+            const Category = db.Category;
+            const existingCategory = await Category.findOne({
+                where: { name }
+            });
+            
+            if (existingCategory) {
+                return res.status(400).json({
+                    success: false,
+                    message: '该类别名称已存在'
+                });
+            }
+        }
+        
+        // 更新Category表中的记录
+        const Category = db.Category;
+        const categoryRecord = await Category.findOne({
+            where: { name: oldName }
+        });
+        
+        if (!categoryRecord) {
+            return res.status(404).json({
+                success: false,
+                message: '类别不存在'
+            });
+        }
+        
+        // 更新类别记录
+        await categoryRecord.update({ name });
+        
+        // 更新所有使用该类别的产品
+        await Product.update(
+            { category: name },
+            { where: { category: oldName } }
+        );
+        
+        res.status(200).json({
+            success: true,
+            message: '类别更新成功',
+            category: {
+                id: categoryRecord.id,
+                name,
+                description
+            }
+        });
+    } catch (error) {
+        console.error('更新类别失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '更新类别失败',
             error: error.message
         });
     }

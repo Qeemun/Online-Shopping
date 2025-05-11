@@ -1,5 +1,6 @@
 const db = require('../models');
 const { Op } = require('sequelize');
+const CategoryHelper = require('../services/categoryHelper');
 
 /**
  * 销售状态与业绩统计控制器
@@ -115,16 +116,23 @@ class SalesStatsController {
       } else if (endDate) {
         dateFilter.createdAt = { [Op.lte]: new Date(endDate) };
       }
+        // 获取类别名称
+      const categoryName = await CategoryHelper.getCategoryName(categoryId);
+      if (!categoryName) {
+        return res.status(404).json({
+          success: false,
+          message: '找不到指定的类别'
+        });
+      }
       
       // 获取该类别下的所有产品
       const products = await db.Product.findAll({
-        where: { categoryId: categoryId },
-        attributes: ['id', 'name', 'price', 'stock']
+        where: { category: categoryName },
+        attributes: ['id', 'name', 'price', 'stock', 'category']
       });
       
       const productIds = products.map(product => product.id);
-      
-      // 获取这些产品的销售数据
+        // 获取这些产品的销售数据
       const orderItems = await db.OrderItem.findAll({
         where: {
           productId: { [Op.in]: productIds },
@@ -134,7 +142,10 @@ class SalesStatsController {
           {
             model: db.Order,
             as: 'order',
-            attributes: ['id', 'createdAt', 'status']
+            attributes: ['id', 'createdAt', 'status'],
+            where: {
+              status: { [Op.in]: ['completed', 'paid'] }  // 只计算已完成或已支付的订单
+            }
           }
         ]
       });
@@ -155,24 +166,34 @@ class SalesStatsController {
           revenue: totalRevenue,
           averagePrice: totalQuantitySold > 0 ? (totalRevenue / totalQuantitySold) : product.price
         };
-      });
-      
-      // 计算类别总体统计数据
+      });      // 计算类别总体统计数据
       const categorySummary = {
         categoryId: parseInt(categoryId),
+        category: categoryName,
         totalProducts: products.length,
         totalSales: salesData.reduce((sum, item) => sum + item.quantitySold, 0),
         totalRevenue: salesData.reduce((sum, item) => sum + item.revenue, 0),
-        averageProductPrice: products.reduce((sum, product) => sum + product.price, 0) / products.length,
-        lowStockProducts: products.filter(product => product.stock < 10).length
+        averageProductPrice: products.reduce((sum, product) => sum + parseFloat(product.price), 0) / products.length,
+        lowStockProducts: products.filter(product => product.stock < 10).length,
+        // 添加类别销售数量和库存数量
+        soldQuantity: salesData.reduce((sum, item) => sum + item.quantitySold, 0),
+        stockQuantity: products.reduce((sum, product) => sum + product.stock, 0)
       };
-      
-      res.status(200).json({
+        res.status(200).json({
         success: true,
         data: {
           summary: categorySummary,
           products: salesData
-        }
+        },
+        // 添加类别业绩数据数组，便于前端直接使用
+        categoryPerformance: [{
+          categoryId: parseInt(categoryId),
+          category: categoryName,
+          totalRevenue: categorySummary.totalRevenue,
+          orderCount: new Set(orderItems.filter(item => item.order && (item.order.status === 'completed' || item.order.status === 'paid')).map(item => item.order.id)).size,
+          soldQuantity: categorySummary.soldQuantity,
+          stockQuantity: categorySummary.stockQuantity
+        }]
       });
     } catch (error) {
       console.error('Error getting category performance:', error);
@@ -319,11 +340,13 @@ class SalesStatsController {
       } else if (endDate) {
         dateFilter.createdAt = { [Op.lte]: new Date(endDate) };
       }
-      
-      // 获取该类别下的所有产品
+        // 获取该类别下的所有产品
       const productsQuery = { where: {} };
       if (categoryId !== 'all') {
-        productsQuery.where.categoryId = categoryId;
+        const categoryName = await CategoryHelper.getCategoryName(categoryId);
+        if (categoryName) {
+          productsQuery.where.category = categoryName;
+        }
       }
       
       const products = await db.Product.findAll(productsQuery);
@@ -362,6 +385,11 @@ class SalesStatsController {
       };
       
       const orderItems = await db.OrderItem.findAll(orderItemsQuery);
+        // 获取所有产品的类别ID映射
+      const categoryIdMap = {};
+      for (const product of products) {
+        categoryIdMap[product.id] = await CategoryHelper.getCategoryId(product.category);
+      }
       
       // 按产品计算转化率数据
       const conversionData = productIds.map(productId => {
@@ -395,7 +423,8 @@ class SalesStatsController {
         return {
           productId,
           productName: product.name,
-          categoryId: product.categoryId,
+          category: product.category,
+          categoryId: categoryIdMap[productId],
           totalViews,
           uniqueViewers,
           totalPurchased,
@@ -503,11 +532,10 @@ class SalesStatsController {
         } else if (product.stock <= 5) {
           riskLevel = 'MEDIUM';
         }
-        
-        return {
+          return {
           productId: product.id,
           productName: product.name,
-          categoryId: product.categoryId,
+          category: product.category,
           currentStock: product.stock,
           salesLast30Days: totalSoldLast30Days,
           avgDailySales: dailySalesRate,
@@ -525,6 +553,572 @@ class SalesStatsController {
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve inventory alerts',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * 获取销售人员的类别业绩数据
+   * @param {Object} req - 请求对象
+   * @param {Object} res - 响应对象
+   */
+  async getCategoryPerformanceForSales(req, res) {
+    try {
+      console.log('执行 getCategoryPerformanceForSales 方法');
+      const { salesId } = req.query;
+      const { startDate, endDate } = req.query;
+      
+      // 构建日期查询条件
+      const dateFilter = {};
+      if (startDate && endDate) {
+        dateFilter.createdAt = {
+          [Op.between]: [new Date(startDate), new Date(endDate)]
+        };
+      } else if (startDate) {
+        dateFilter.createdAt = { [Op.gte]: new Date(startDate) };
+      } else if (endDate) {
+        dateFilter.createdAt = { [Op.lte]: new Date(endDate) };
+      }
+
+      // 获取特定销售人员负责的产品
+      let products = [];
+      let productIds = [];      if (salesId) {
+        console.log(`查询销售人员ID: ${salesId} 的负责产品`);
+        const assignments = await db.SalesProductAssignment.findAll({
+          where: { salesId: parseInt(salesId) }
+        });
+        
+        productIds = assignments.map(a => a.productId);
+        console.log(`找到 ${productIds.length} 个销售人员负责的产品`);
+        
+        products = await db.Product.findAll({
+          where: { 
+            id: { [Op.in]: productIds }
+          },
+          attributes: ['id', 'name', 'price', 'stock', 'category']
+        });
+      } else {
+        console.log('查询所有产品');
+        products = await db.Product.findAll({
+          attributes: ['id', 'name', 'price', 'stock', 'category']
+        });
+        productIds = products.map(p => p.id);
+      }if (products.length === 0) {
+        return res.status(200).json({
+          success: true,
+          message: '没有找到相关产品',
+          categoryPerformance: [],
+          salesTrend: []
+        });
+      }
+      
+      // 使用 CategoryHelper 为产品添加 categoryId
+      products = await CategoryHelper.enrichProductsWithCategoryId(products);
+
+      // 获取产品的订单项
+      const orderItems = await db.OrderItem.findAll({
+        where: {
+          productId: { [Op.in]: productIds },
+          ...dateFilter
+        },
+        include: [
+          {
+            model: db.Order,
+            as: 'order',
+            attributes: ['id', 'createdAt', 'status'],
+            where: { status: 'completed' }
+          },
+          {
+            model: db.Product,
+            as: 'product',
+            attributes: ['id', 'name', 'category']
+          }
+        ]
+      });
+
+      console.log(`找到 ${orderItems.length} 个订单项`);
+
+      // 按类别分组统计
+      const categoryStats = {};
+      
+      // 初始化类别统计
+      products.forEach(product => {
+        if (!categoryStats[product.category]) {
+          categoryStats[product.category] = {
+            category: product.category,
+            totalRevenue: 0,
+            orderCount: 0,
+            salesQuantity: 0,
+            avgOrderValue: 0,
+            currentStock: 0
+          };
+        }
+        
+        // 累加当前库存
+        categoryStats[product.category].currentStock += product.stock;
+      });
+
+      // 统计销售数据
+      orderItems.forEach(item => {
+        const category = item.product.category;
+        if (categoryStats[category]) {
+          const revenue = parseFloat(item.price) * item.quantity;
+          categoryStats[category].totalRevenue += revenue;
+          categoryStats[category].salesQuantity += item.quantity;
+          categoryStats[category].orderCount += 1;
+        }
+      });
+
+      // 计算平均客单价
+      Object.keys(categoryStats).forEach(key => {
+        const stats = categoryStats[key];
+        stats.avgOrderValue = stats.orderCount > 0 ? 
+          (stats.totalRevenue / stats.orderCount) : 0;
+      });
+
+      // 生成时间序列销售趋势
+      const salesTrend = await this.generateSalesTrend(productIds, startDate, endDate);
+
+      console.log(`生成了 ${Object.keys(categoryStats).length} 个类别的统计数据`);
+      
+      res.status(200).json({
+        success: true,
+        categoryPerformance: Object.values(categoryStats),
+        salesTrend
+      });
+    } catch (error) {
+      console.error('获取类别业绩数据失败:', error);
+      res.status(500).json({
+        success: false,
+        message: '获取类别业绩数据失败',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * 获取销售人员负责的类别列表
+   * @param {Object} req - 请求对象
+   * @param {Object} res - 响应对象
+   */
+  async getAssignedCategories(req, res) {
+    try {
+      const { salesId } = req.params;
+      
+      // 先获取销售人员负责的产品
+      const assignments = await db.SalesProductAssignment.findAll({
+        where: { salesId }
+      });
+      
+      if (assignments.length === 0) {
+        return res.json({
+          success: true,
+          data: []
+        });
+      }
+      
+      const productIds = assignments.map(a => a.productId);
+      
+      // 获取产品信息以确定类别
+      const products = await db.Product.findAll({
+        where: { id: { [Op.in]: productIds } },
+        attributes: ['id', 'category']
+      });
+      
+      // 获取唯一类别列表
+      const categories = [...new Set(products.map(p => p.category))];
+      
+      // 获取每个类别的产品数量
+      const categoryData = categories.map(category => {
+        const count = products.filter(p => p.category === category).length;
+        return {
+          category,
+          productCount: count
+        };
+      });
+      
+      res.json({
+        success: true,
+        data: categoryData
+      });
+    } catch (error) {
+      console.error('获取销售人员负责类别失败:', error);
+      res.status(500).json({
+        success: false,
+        message: '获取销售人员负责类别失败',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * 获取销售人员负责的产品列表
+   * @param {Object} req - 请求对象
+   * @param {Object} res - 响应对象
+   */
+  async getSalesStaffProducts(req, res) {
+    try {
+      const { salesId } = req.params;
+      const { page = 1, limit = 20 } = req.query;
+      
+      const pageSize = parseInt(limit);
+      const offset = (parseInt(page) - 1) * pageSize;
+      
+      // 获取销售人员负责的产品ID
+      const assignments = await db.SalesProductAssignment.findAll({
+        where: { salesId }
+      });
+      
+      if (assignments.length === 0) {
+        return res.json({
+          success: true,
+          data: [],
+          pagination: {
+            page: parseInt(page),
+            limit: pageSize,
+            total: 0,
+            totalPages: 0
+          }
+        });
+      }
+      
+      const productIds = assignments.map(a => a.productId);
+      
+      // 获取产品总数
+      const total = await db.Product.count({
+        where: { id: { [Op.in]: productIds } }
+      });
+      
+      // 获取分页后的产品信息
+      const products = await db.Product.findAll({
+        where: { id: { [Op.in]: productIds } },
+        limit: pageSize,
+        offset,
+        order: [['id', 'ASC']]
+      });
+      
+      // 查询产品的销售情况
+      const productData = await Promise.all(products.map(async (product) => {
+        // 获取产品销售量
+        const soldQuantity = await db.OrderItem.sum('quantity', {
+          where: { productId: product.id },
+          include: [{
+            model: db.Order,
+            as: 'order',
+            where: { status: 'completed' }
+          }]
+        }) || 0;
+        
+        return {
+          ...product.toJSON(),
+          soldQuantity
+        };
+      }));
+      
+      res.json({
+        success: true,
+        data: productData,
+        pagination: {
+          page: parseInt(page),
+          limit: pageSize,
+          total,
+          totalPages: Math.ceil(total / pageSize)
+        }
+      });
+    } catch (error) {
+      console.error('获取销售人员负责产品失败:', error);
+      res.status(500).json({
+        success: false,
+        message: '获取销售人员负责产品失败',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * 辅助方法：生成销售趋势数据
+   * @param {Array} productIds - 产品ID数组
+   * @param {string} startDate - 开始日期
+   * @param {string} endDate - 结束日期
+   * @return {Array} 销售趋势数据
+   */
+  async generateSalesTrend(productIds, startDate, endDate) {
+    try {
+      // 默认显示最近30天
+      let start = new Date();
+      start.setDate(start.getDate() - 30);
+      start.setHours(0, 0, 0, 0);
+      
+      let end = new Date();
+      end.setHours(23, 59, 59, 999);
+      
+      if (startDate) {
+        start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+      }
+      
+      if (endDate) {
+        end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+      }
+      
+      // 获取时间范围内的所有订单项
+      const orderItems = await db.OrderItem.findAll({
+        where: {
+          productId: { [Op.in]: productIds },
+          createdAt: { [Op.between]: [start, end] }
+        },
+        include: [
+          {
+            model: db.Order,
+            as: 'order',
+            attributes: ['id', 'createdAt', 'status'],
+            where: { status: 'completed' }
+          }
+        ]
+      });
+      
+      // 按日期分组
+      const salesByDate = {};
+      
+      // 初始化日期范围内的所有日期
+      const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+      for (let i = 0; i < days; i++) {
+        const date = new Date(start);
+        date.setDate(date.getDate() + i);
+        const dateStr = date.toISOString().split('T')[0];
+        salesByDate[dateStr] = {
+          date: dateStr,
+          revenue: 0,
+          quantity: 0
+        };
+      }
+      
+      // 汇总销售数据
+      orderItems.forEach(item => {
+        const dateStr = item.order.createdAt.toISOString().split('T')[0];
+        if (salesByDate[dateStr]) {
+          salesByDate[dateStr].revenue += parseFloat(item.price) * item.quantity;
+          salesByDate[dateStr].quantity += item.quantity;
+        }
+      });
+      
+      // 转换为数组并按日期排序
+      const trend = Object.values(salesByDate);
+      trend.sort((a, b) => new Date(a.date) - new Date(b.date));
+      
+      return trend;
+    } catch (error) {
+      console.error('生成销售趋势数据失败:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 获取销售人员负责的类别
+   * @param {Object} req - 请求对象
+   * @param {Object} res - 响应对象
+   */
+  async getAssignedCategories(req, res) {
+    try {
+      console.log('执行 getAssignedCategories 方法');
+      const { salesId } = req.params;
+      
+      if (!salesId) {
+        return res.status(400).json({
+          success: false,
+          message: '请提供销售人员ID'
+        });
+      }
+      
+      console.log(`查询销售人员ID: ${salesId} 的负责类别`);
+      
+      // 查询销售人员负责的产品
+      const assignments = await db.SalesProductAssignment.findAll({
+        where: { salesId: parseInt(salesId) }
+      });
+      
+      if (!assignments || assignments.length === 0) {
+        console.log(`销售人员ID ${salesId} 没有负责任何产品`);
+        return res.status(200).json({
+          success: true,
+          categories: []
+        });
+      }
+      
+      const productIds = assignments.map(a => a.productId);
+      console.log(`找到 ${productIds.length} 个销售人员负责的产品`);
+      
+      // 获取这些产品的类别
+      const products = await db.Product.findAll({
+        where: { id: { [Op.in]: productIds } },
+        attributes: ['category']
+      });
+      
+      // 提取唯一的类别
+      const categories = [...new Set(products.map(p => p.category))];
+      console.log(`找到 ${categories.length} 个唯一类别`);
+      
+      res.status(200).json({
+        success: true,
+        categories
+      });
+    } catch (error) {
+      console.error('获取销售人员负责类别失败:', error);
+      res.status(500).json({
+        success: false,
+        message: '获取销售人员负责类别失败',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * 获取销售人员负责的产品
+   * @param {Object} req - 请求对象
+   * @param {Object} res - 响应对象
+   */
+  async getSalesStaffProducts(req, res) {
+    try {
+      console.log('执行 getSalesStaffProducts 方法');
+      const { salesId } = req.params;
+      const { page = 1, limit = 20, category, stockStatus } = req.query;
+      
+      if (!salesId) {
+        return res.status(400).json({
+          success: false,
+          message: '请提供销售人员ID'
+        });
+      }
+      
+      console.log(`查询销售人员ID: ${salesId} 的负责产品，页码: ${page}, 每页: ${limit}`);
+      
+      // 查询销售人员负责的产品ID
+      const assignments = await db.SalesProductAssignment.findAll({
+        where: { salesId: parseInt(salesId) }
+      });
+      
+      if (!assignments || assignments.length === 0) {
+        console.log(`销售人员ID ${salesId} 没有负责任何产品`);
+        return res.status(200).json({
+          success: true,
+          products: [],
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            totalItems: 0,
+            totalPages: 0
+          }
+        });
+      }
+      
+      const productIds = assignments.map(a => a.productId);
+      console.log(`找到 ${productIds.length} 个销售人员负责的产品ID`);
+      
+      // 构建产品查询条件
+      const where = { id: { [Op.in]: productIds } };
+      
+      // 添加类别筛选
+      if (category) {
+        where.category = category;
+      }
+      
+      // 添加库存状态筛选
+      if (stockStatus) {
+        if (stockStatus === 'normal') {
+          where.stock = { [Op.gt]: 10 };
+        } else if (stockStatus === 'warning') {
+          where.stock = { [Op.and]: [{ [Op.gt]: 0 }, { [Op.lte]: 10 }] };
+        } else if (stockStatus === 'danger') {
+          where.stock = { [Op.lte]: 0 };
+        }
+      }
+      
+      // 分页查询产品
+      const offset = (parseInt(page) - 1) * parseInt(limit);
+      
+      const { count, rows } = await db.Product.findAndCountAll({
+        where,
+        limit: parseInt(limit),
+        offset,
+        order: [['stock', 'ASC']]  // 按库存升序排列，库存少的优先显示
+      });
+      
+      console.log(`查询到 ${rows.length} 个产品，总共 ${count} 个符合条件的产品`);
+      
+      // 获取这些产品的销售数据
+      const productIds30Days = rows.map(p => p.id);
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const orderItems = await db.OrderItem.findAll({
+        where: {
+          productId: { [Op.in]: productIds30Days },
+          createdAt: { [Op.gte]: thirtyDaysAgo }
+        },
+        include: [
+          {
+            model: db.Order,
+            as: 'order',
+            attributes: ['id', 'createdAt', 'status'],
+            where: { status: 'completed' }
+          }
+        ]
+      });
+      
+      // 计算每个产品的销售数据
+      const salesData = {};
+      orderItems.forEach(item => {
+        if (!salesData[item.productId]) {
+          salesData[item.productId] = {
+            quantitySold: 0,
+            lastSold: null
+          };
+        }
+        
+        salesData[item.productId].quantitySold += item.quantity;
+        
+        const soldDate = new Date(item.order.createdAt);
+        if (!salesData[item.productId].lastSold || 
+            soldDate > salesData[item.productId].lastSold) {
+          salesData[item.productId].lastSold = soldDate;
+        }
+      });
+      
+      // 组合产品信息和销售数据
+      const products = rows.map(product => {
+        const productSales = salesData[product.id] || {
+          quantitySold: 0,
+          lastSold: null
+        };
+        
+        return {
+          id: product.id,
+          name: product.name,
+          category: product.category,
+          price: product.price,
+          stock: product.stock,
+          quantitySold: productSales.quantitySold,
+          lastSold: productSales.lastSold
+        };
+      });
+      
+      res.status(200).json({
+        success: true,
+        products,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          totalItems: count,
+          totalPages: Math.ceil(count / parseInt(limit))
+        }
+      });
+    } catch (error) {
+      console.error('获取销售人员负责产品失败:', error);
+      res.status(500).json({
+        success: false,
+        message: '获取销售人员负责产品失败',
         error: error.message
       });
     }

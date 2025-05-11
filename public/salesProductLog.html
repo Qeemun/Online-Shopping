@@ -1,132 +1,117 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-cn">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>销售产品日志 - 在线购物平台</title>
+    <title>销售产品日志 - 管理中心</title>
+    <link rel="stylesheet" href="css/variables.css">
     <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/unified-dashboard.css">
+    <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/salesProductLog.css">
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="js/categoryUtils.js"></script>
 </head>
 <body>
+    <!-- Header -->
     <header>
-        <div class="logo">
-            <a href="index.html">在线购物平台</a>
-        </div>
+        <h1>销售产品日志</h1>
         <nav>
-            <ul>
-                <li><a href="index.html">首页</a></li>
-                <li id="cart-link" style="display: none;"><a href="cart.html">购物车</a></li>
-                <li id="order-history-link" style="display: none;"><a href="orderHistory.html">订单历史</a></li>
-                <li id="admin-link" style="display: none;"><a href="dashboard.html">管理面板</a></li>
-                <li id="login-link"><a href="login.html">登录</a></li>
-                <li id="register-link"><a href="register.html">注册</a></li>
-                <li id="username" class="username"></li>
-                <li><button id="logout-button" style="display: none;">退出</button></li>
-            </ul>
+            <a href="dashboard.html">返回管理面板</a>
+            <a href="index.html">首页</a>
+            <span id="current-user"></span>
         </nav>
-    </header>
-
-    <div class="dashboard-container">
-        <aside class="sidebar">
-            <h3>销售管理</h3>
-            <ul class="sidebar-menu">
-                <li><a href="dashboard.html"><span class="icon">📊</span> 控制面板</a></li>
-                <li><a href="productSalesMonitor.html"><span class="icon">📈</span> 销售监控</a></li>
-                <li class="active"><a href="salesProductLog.html"><span class="icon">📋</span> 产品日志</a></li>
-                <li id="sales-staff-mgmt" style="display: none;"><a href="salesStaffManagement.html"><span class="icon">👥</span> 销售人员管理</a></li>
-                <li id="product-cat-mgmt" style="display: none;"><a href="productCategoryManagement.html"><span class="icon">🗂️</span> 商品类别管理</a></li>
-                <li id="order-mgmt" style="display: none;"><a href="orderManagement.html"><span class="icon">📦</span> 订单管理</a></li>
-                <li id="customer-mgmt" style="display: none;"><a href="customerManagement.html"><span class="icon">👤</span> 客户管理</a></li>
-                <li id="reports-link" style="display: none;"><a href="reports.html"><span class="icon">📝</span> 销售报表</a></li>
-                <li id="operation-logs" style="display: none;"><a href="operationLogs.html"><span class="icon">🔍</span> 操作日志</a></li>
-            </ul>
-            <div class="sidebar-footer">
-                <p>&copy; 2025 在线购物平台</p>
-            </div>
-        </aside>
-
-        <main class="main-content">
-            <div class="page-header">
-                <h1>产品日志查询</h1>
-                <p class="breadcrumb">首页 / 销售管理 / 产品日志</p>
-            </div>
-
-            <div class="content-wrapper">
-                <div class="filter-panel">
-                    <div class="filter-header">
-                        <h2>过滤条件</h2>
-                        <button id="toggle-filters" class="toggle-btn">▼</button>
-                    </div>
-                    <div id="filter-content" class="filter-content">
-                        <form id="log-filter-form">
-                            <div class="filter-row">
-                                <div class="filter-item">
-                                    <label for="log-type">日志类型</label>
-                                    <select id="log-type" name="log-type">
-                                        <option value="all" selected>全部日志</option>
-                                        <option value="view">浏览记录</option>
-                                        <option value="purchase">购买记录</option>
-                                    </select>
+    </header>    <main>
+        <!-- 页面标题 -->
+        <section class="page-header">
+            <h2>产品日志查询</h2>
+            <p class="breadcrumb">首页 / 销售管理 / 产品日志</p>
+        </section>            <div class="content-wrapper">
+                <!-- 工具栏 -->
+                <section class="toolbar">
+                    <div class="filter-group">
+                        <div class="filter-item">
+                            <label for="log-type">日志类型:</label>
+                            <select id="log-type" name="log-type">
+                                <option value="all" selected>全部日志</option>
+                                <option value="view">浏览记录</option>
+                                <option value="purchase">购买记录</option>
+                            </select>
+                        </div>
+                        <div class="filter-item">
+                            <label for="date-range">日期范围:</label>
+                            <select id="date-range">
+                                <option value="7">最近7天</option>
+                                <option value="30" selected>最近30天</option>
+                                <option value="90">最近3个月</option>
+                                <option value="custom">自定义</option>
+                            </select>
+                        </div>
+                        <div class="filter-item" id="custom-date-container" style="display: none;">
+                            <div class="date-inputs">
+                                <div>
+                                    <label for="start-date">开始日期:</label>
+                                    <input type="date" id="start-date">
                                 </div>
-                                <div class="filter-item date-range">
-                                    <label>日期范围</label>
-                                    <div class="date-inputs">
-                                        <input type="date" id="start-date" name="start-date">
-                                        <span>至</span>
-                                        <input type="date" id="end-date" name="end-date">
+                                <div>
+                                    <label for="end-date">结束日期:</label>
+                                    <input type="date" id="end-date">
+                                </div>
+                            </div>
+                            <button id="apply-date-range" class="secondary-button">应用</button>
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <div class="filter-item">
+                            <label for="product-category">商品类别:</label>
+                            <select id="product-category" name="product-category">
+                                <option value="all" selected>全部类别</option>
+                                <!-- 类别将通过JS动态加载 -->
+                            </select>
+                        </div>
+                        <div class="filter-item">
+                            <label for="product">商品名称:</label>
+                            <select id="product" name="product">
+                                <option value="all" selected>全部商品</option>
+                                <!-- 商品将通过JS动态加载 -->
+                            </select>
+                        </div>
+                        <div class="action-buttons">
+                            <button id="search-logs" class="primary-button">搜索记录</button>
+                            <button id="reset-filters" class="secondary-button">重置筛选</button>
+                        </div>
+                    </div>
+                </section>                <div class="tabs-container">
+                    <div class="tab-navigation">
+                        <button class="tab active" data-tab="view-logs"><i class="fas fa-eye"></i> 浏览日志</button>
+                        <button class="tab" data-tab="purchase-logs"><i class="fas fa-shopping-cart"></i> 购买日志</button>
+                    </div><div class="tab-content active" id="view-logs">
+                        <section class="logs-container">
+                            <h3>商品浏览记录</h3>
+                            <div class="stats-cards">
+                                <div class="card stats-card">
+                                    <div class="card-icon"><i class="fas fa-eye"></i></div>
+                                    <div class="card-content">
+                                        <div class="card-value" id="total-views">0</div>
+                                        <div class="card-label">总浏览次数</div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="filter-row">
-                                <div class="filter-item">
-                                    <label for="product-category">商品类别</label>
-                                    <select id="product-category" name="product-category">
-                                        <option value="all" selected>全部类别</option>
-                                        <!-- 类别将通过JS动态加载 -->
-                                    </select>
+                                <div class="card stats-card">
+                                    <div class="card-icon"><i class="fas fa-users"></i></div>
+                                    <div class="card-content">
+                                        <div class="card-value" id="unique-users-view">0</div>
+                                        <div class="card-label">独立用户数</div>
+                                    </div>
                                 </div>
-                                <div class="filter-item">
-                                    <label for="product">商品名称</label>
-                                    <select id="product" name="product">
-                                        <option value="all" selected>全部商品</option>
-                                        <!-- 商品将通过JS动态加载 -->
-                                    </select>
+                                <div class="card stats-card">
+                                    <div class="card-icon"><i class="fas fa-clock"></i></div>
+                                    <div class="card-content">
+                                        <div class="card-value" id="avg-view-time">0秒</div>
+                                        <div class="card-label">平均停留时间</div>
+                                    </div>
                                 </div>
-                                <div class="filter-actions">
-                                    <button type="submit" class="primary-btn">搜索</button>
-                                    <button type="reset" class="secondary-btn">重置</button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <div class="tabs-container">
-                    <div class="tabs">
-                        <div class="tab active" data-tab="view-logs">浏览日志</div>
-                        <div class="tab" data-tab="purchase-logs">购买日志</div>
-                    </div>
-                    
-                    <div class="tab-content active" id="view-logs">
-                        <div class="logs-container">
-                            <h3>商品浏览记录</h3>
-                            <div class="logs-stats">
-                                <div class="stat-card">
-                                    <div class="stat-value" id="total-views">0</div>
-                                    <div class="stat-label">总浏览次数</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-value" id="unique-users-view">0</div>
-                                    <div class="stat-label">独立用户数</div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-value" id="avg-view-time">0秒</div>
-                                    <div class="stat-label">平均停留时间</div>
-                                </div>
-                            </div>
-                            <div class="table-container">
+                            </div>                            <div class="table-container">
                                 <table class="data-table" id="view-logs-table">
                                     <thead>
                                         <tr>
@@ -141,35 +126,48 @@
                                     </thead>
                                     <tbody>
                                         <!-- 浏览日志将通过JS动态加载 -->
+                                        <tr>
+                                            <td colspan="7" class="text-center">加载中...</td>
+                                        </tr>
                                     </tbody>
                                 </table>
-                                <div class="loading-indicator" id="view-logs-loading">加载中...</div>
-                                <div class="empty-message" id="view-logs-empty">没有符合条件的浏览记录</div>
-                            </div>
-                            <div class="pagination" id="view-logs-pagination">
+                                <div class="loading-indicator" id="view-logs-loading" style="display:none;">
+                                    <div class="spinner"></div>
+                                    <p>加载数据中，请稍候...</p>
+                                </div>
+                                <div class="empty-message" id="view-logs-empty" style="display:none;">没有符合条件的浏览记录</div>
+                            </div>                            <div class="pagination-controls" id="view-logs-pagination">
                                 <!-- 分页控件将通过JS动态加载 -->
                             </div>
-                        </div>
+                        </section>
                     </div>
                     
                     <div class="tab-content" id="purchase-logs">
-                        <div class="logs-container">
+                        <section class="logs-container">
                             <h3>商品购买记录</h3>
-                            <div class="logs-stats">
-                                <div class="stat-card">
-                                    <div class="stat-value" id="total-orders">0</div>
-                                    <div class="stat-label">总订单数</div>
+                            <div class="stats-cards">
+                                <div class="card stats-card">
+                                    <div class="card-icon"><i class="fas fa-shopping-bag"></i></div>
+                                    <div class="card-content">
+                                        <div class="card-value" id="total-orders">0</div>
+                                        <div class="card-label">总订单数</div>
+                                    </div>
                                 </div>
-                                <div class="stat-card">
-                                    <div class="stat-value" id="unique-users-purchase">0</div>
-                                    <div class="stat-label">购买用户数</div>
+                                <div class="card stats-card">
+                                    <div class="card-icon"><i class="fas fa-user-check"></i></div>
+                                    <div class="card-content">
+                                        <div class="card-value" id="unique-users-purchase">0</div>
+                                        <div class="card-label">购买用户数</div>
+                                    </div>
                                 </div>
-                                <div class="stat-card">
-                                    <div class="stat-value" id="total-amount">¥0</div>
-                                    <div class="stat-label">总销售额</div>
+                                <div class="card stats-card">
+                                    <div class="card-icon"><i class="fas fa-yen-sign"></i></div>
+                                    <div class="card-content">
+                                        <div class="card-value" id="total-amount">¥0</div>
+                                        <div class="card-label">总销售额</div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="table-container">
+                            </div>                            <div class="table-container">
                                 <table class="data-table" id="purchase-logs-table">
                                     <thead>
                                         <tr>
@@ -186,25 +184,28 @@
                                     </thead>
                                     <tbody>
                                         <!-- 购买日志将通过JS动态加载 -->
+                                        <tr>
+                                            <td colspan="9" class="text-center">加载中...</td>
+                                        </tr>
                                     </tbody>
                                 </table>
-                                <div class="loading-indicator" id="purchase-logs-loading">加载中...</div>
-                                <div class="empty-message" id="purchase-logs-empty">没有符合条件的购买记录</div>
-                            </div>
-                            <div class="pagination" id="purchase-logs-pagination">
+                                <div class="loading-indicator" id="purchase-logs-loading" style="display:none;">
+                                    <div class="spinner"></div>
+                                    <p>加载数据中，请稍候...</p>
+                                </div>
+                                <div class="empty-message" id="purchase-logs-empty" style="display:none;">没有符合条件的购买记录</div>
+                            </div>                            <div class="pagination-controls" id="purchase-logs-pagination">
                                 <!-- 分页控件将通过JS动态加载 -->
                             </div>
-                        </div>
+                        </section>
                     </div>
                 </div>
             </div>
-        </main>
-    </div>
+    </main>
 
-    <footer class="main-footer">
+    <footer>
         <p>&copy; 2025 在线购物平台 | 所有权利保留</p>
-    </footer>
-
+    </footer>    <!-- 脚本引用 -->
     <script src="js/auth.js"></script>
     <script src="js/api.js"></script>
     <script src="js/salesUtils.js"></script>

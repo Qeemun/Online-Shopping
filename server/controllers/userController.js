@@ -111,6 +111,9 @@ exports.login = async (req, res) => {
 
 exports.verifyToken = (requiredRole) => {
     return (req, res, next) => {
+        // 始终设置Content-Type为application/json
+        res.setHeader('Content-Type', 'application/json');
+        
         const token = req.headers['authorization']?.split(' ')[1]; // 获取 Authorization 头中的 token
 
         if (!token) {
@@ -395,6 +398,151 @@ exports.getUserStats = async (req, res) => {
         res.status(500).json({
             success: false,
             message: '获取用户统计时出错',
+            error: error.message
+        });
+    }
+};
+
+// 获取所有客户数据
+exports.getAllCustomers = async (req, res) => {
+    try {
+        const customers = await User.findAll({
+            where: { role: 'customer' },
+            attributes: ['id', 'username', 'email', 'createdAt', 'isActive'],
+            order: [['createdAt', 'DESC']]
+        });
+
+        res.json({
+            success: true,
+            customers
+        });
+    } catch (error) {
+        console.error('获取客户数据失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '获取客户数据时出错',
+            error: error.message
+        });
+    }
+};
+
+// 获取单个客户信息
+exports.getCustomerById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const customer = await User.findOne({
+            where: { 
+                id,
+                role: 'customer'
+            },
+            attributes: ['id', 'username', 'email', 'createdAt', 'isActive'],
+            include: [{
+                model: db.UserProfile,
+                as: 'profile',
+                attributes: ['phone', 'address', 'favoriteCategory']
+            }]
+        });
+
+        if (!customer) {
+            return res.status(404).json({
+                success: false,
+                message: '客户不存在'
+            });
+        }
+
+        res.json({
+            success: true,
+            customer
+        });
+    } catch (error) {
+        console.error('获取客户信息失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '获取客户信息时出错',
+            error: error.message
+        });
+    }
+};
+
+// 更新客户信息
+exports.updateCustomer = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { username, email, isActive } = req.body;
+        
+        const customer = await User.findOne({
+            where: { 
+                id,
+                role: 'customer'
+            }
+        });
+
+        if (!customer) {
+            return res.status(404).json({
+                success: false,
+                message: '客户不存在'
+            });
+        }
+
+        // 更新用户基本信息
+        await customer.update({
+            username,
+            email,
+            isActive
+        });
+
+        res.json({
+            success: true,
+            message: '客户信息已更新',
+            customer: {
+                id: customer.id,
+                username: customer.username,
+                email: customer.email,
+                isActive: customer.isActive
+            }
+        });
+    } catch (error) {
+        console.error('更新客户信息失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '更新客户信息时出错',
+            error: error.message
+        });
+    }
+};
+
+// 删除客户
+exports.deleteCustomer = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const customer = await User.findOne({
+            where: { 
+                id,
+                role: 'customer'
+            }
+        });
+
+        if (!customer) {
+            return res.status(404).json({
+                success: false,
+                message: '客户不存在'
+            });
+        }
+
+        // 执行软删除 - 将用户标记为非活跃而不是物理删除
+        await customer.update({ isActive: false });
+
+        res.json({
+            success: true,
+            message: '客户已删除'
+        });
+    } catch (error) {
+        console.error('删除客户失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '删除客户时出错',
             error: error.message
         });
     }

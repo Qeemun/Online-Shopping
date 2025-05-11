@@ -1,15 +1,13 @@
 const { Model, DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {
-    class UserProfile extends Model {
-        static associate(models) {
+    class UserProfile extends Model {        static associate(models) {
             UserProfile.belongsTo(models.User, { 
-                foreignKey: 'userId' 
+                foreignKey: 'userId',
+                as: 'user'
             });
         }
-    }
-
-    UserProfile.init({
+    }    UserProfile.init({
         userId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
@@ -29,6 +27,23 @@ module.exports = (sequelize) => {
         favoriteCategory: {
             type: DataTypes.STRING,
             allowNull: true
+        },
+        fullName: {
+            type: DataTypes.STRING(100),
+            allowNull: true
+        },
+        phone: {
+            type: DataTypes.STRING(20),
+            allowNull: true
+        },
+        address: {
+            type: DataTypes.STRING(500),
+            allowNull: true
+        },
+        profileComplete: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
+            allowNull: false
         },
         createdAt: {
             type: DataTypes.DATE,

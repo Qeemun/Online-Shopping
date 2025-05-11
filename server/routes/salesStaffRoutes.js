@@ -1,10 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const salesStaffController = require('../controllers/salesStaffController');
-const authMiddleware = require('../config/middleware/authMiddleware');
+const { authenticate, isAdmin } = require('../config/middleware/auth');
 
-// 保护所有路由 - 需要登录
-router.use(authMiddleware.verifyToken);
+// 组合鉴权和管理员权限检查
+const adminAuth = [authenticate, isAdmin];
+
+// 保护所有路由 - 需要管理员权限
+router.use(adminAuth);
 
 // === 管理员接口 ===
 
@@ -27,9 +30,9 @@ router.delete('/:id', salesStaffController.deleteSalesStaff);
 router.post('/:id/reset-password', salesStaffController.resetSalesStaffPassword);
 
 // 为销售人员分配商品
-router.post('/:id/assign-products', authMiddleware.isAdmin, salesStaffController.assignProducts);
+router.post('/:id/assign-products', salesStaffController.assignProducts);
 
 // 取消销售人员的商品分配
-router.post('/:id/unassign-products', authMiddleware.isAdmin, salesStaffController.unassignProducts);
+router.post('/:id/unassign-products', salesStaffController.unassignProducts);
 
 module.exports = router;

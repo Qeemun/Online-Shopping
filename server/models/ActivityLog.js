@@ -1,13 +1,18 @@
 'use strict';
 const { Model } = require('sequelize');
 
-module.exports = (sequelize, DataTypes) => {
-  class ActivityLog extends Model {
+module.exports = (sequelize, DataTypes) => {  class ActivityLog extends Model {
     static associate(models) {
       // 关联用户表
       ActivityLog.belongsTo(models.User, {
         foreignKey: 'userId',
         as: 'users'
+      });
+      
+      // 添加与Product的关联
+      ActivityLog.belongsTo(models.Product, {
+        foreignKey: 'productId',
+        as: 'product'
       });
     }
   }

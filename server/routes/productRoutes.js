@@ -27,6 +27,9 @@ router.get('/category/:category', productController.getProductsByCategory);
 // 添加新商品类别
 router.post('/categories', verifyToken(), productController.addCategory);
 
+// 更新商品类别
+router.put('/categories/:oldName', verifyToken(), productController.updateCategory);
+
 // 删除商品类别
 router.delete('/categories/:category', verifyToken(), productController.deleteCategory);
 

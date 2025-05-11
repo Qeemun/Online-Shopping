@@ -2,17 +2,29 @@
  * 操作日志页面脚本
  */
 document.addEventListener('DOMContentLoaded', function() {
-    // 初始化销售工具类
-    const salesUtils = new SalesUtils();
-    
-    // 检查用户登录状态和权限
-    salesUtils.checkAuthAndPermission(['sales', 'admin']);
-    
-    // 初始化侧边栏菜单权限
-    setupSidebarByRole();
-    
-    // 初始化日志页面功能
-    initLogPage();
+    try {
+        // 初始化销售工具类
+        const salesUtils = new SalesUtils();
+        
+        // 检查用户登录状态和权限
+        salesUtils.checkAuthAndPermission(['admin']);
+        
+        // 获取当前用户信息并显示
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (user) {
+            document.getElementById('current-user').textContent = `${user.username} (${user.role})`;
+        }
+        
+        // 初始化侧边栏菜单权限
+        setupSidebarByRole();
+        
+        // 初始化日志页面功能
+        initLogPage();
+    } catch (error) {
+        console.error('初始化页面时出错:', error);
+        alert('加载页面时出错，请重新登录');
+        window.location.href = 'login.html?redirect=operationLogs.html';
+    }
 });
 
 /**
@@ -208,15 +220,26 @@ function loadLoginLogs(page = 1) {
     // 构建查询参数
     const queryString = Object.entries(params)
         .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
-        .join('&');
-    
-    // 请求获取登录日志
-    fetch(`http://localhost:3000/api/logs/login?${queryString}`, {
+        .join('&');    // 请求获取登录日志
+    fetch(`http://localhost:3000/api/admin/logs/login?${queryString}`, {
         headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP错误状态: ${response.status}`);
+        }
+        
+        // 检查内容类型
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error(`响应不是JSON格式: ${contentType}`);
+        }
+        
+        return response.json();
+    })
     .then(data => {
         loadingIndicator.style.display = 'none';
         
@@ -303,15 +326,26 @@ function loadAdminLogs(page = 1) {
     // 构建查询参数
     const queryString = Object.entries(params)
         .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
-        .join('&');
-    
-    // 请求获取管理操作日志
-    fetch(`http://localhost:3000/api/logs/admin?${queryString}`, {
+        .join('&');    // 请求获取管理操作日志
+    fetch(`http://localhost:3000/api/admin/logs/activity?${queryString}`, {
         headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP错误状态: ${response.status}`);
+        }
+        
+        // 检查内容类型
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error(`响应不是JSON格式: ${contentType}`);
+        }
+        
+        return response.json();
+    })
     .then(data => {
         loadingIndicator.style.display = 'none';
         

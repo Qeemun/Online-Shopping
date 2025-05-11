@@ -22,13 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
         searchStatus.id = 'search-status';
         searchStatus.style.display = 'none';
         mainContent.insertBefore(searchStatus, productListContainer);
-        
-        // 创建类别筛选区域
-        const categories = [
-            '电子产品', '服装', '家居', '厨房用品', '图书',
-            '玩具', '运动器材', '美妆', '食品', '办公用品'
-        ];
-        
+          // 创建类别筛选区域
         const categoryFilter = document.createElement('div');
         categoryFilter.className = 'category-filter-container';
         categoryFilter.innerHTML = `
@@ -37,11 +31,17 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div class="categories-wrapper">
                 <button class="category-btn active" data-category="">全部</button>
-                ${categories.map(category => 
-                    `<button class="category-btn" data-category="${category}">${category}</button>`
-                ).join('')}
+                <div id="category-buttons-container">
+                    <div class="category-skeleton"></div>
+                    <div class="category-skeleton"></div>
+                    <div class="category-skeleton"></div>
+                    <div class="category-skeleton"></div>
+                </div>
             </div>
         `;
+        
+        // 从服务器加载类别
+        fetchCategories();
         mainContent.insertBefore(categoryFilter, productListContainer);
         
         // 在产品列表容器后添加加载指示器
@@ -79,21 +79,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 performSearch();
             }
         });
-        
-        // 绑定类别按钮点击事件
-        document.querySelectorAll('.category-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
+          // 绑定"全部"类别按钮点击事件
+        const allCategoryBtn = document.querySelector('.category-btn[data-category=""]');
+        if (allCategoryBtn) {
+            allCategoryBtn.addEventListener('click', () => {
                 // 更新按钮状态
                 document.querySelectorAll('.category-btn').forEach(b => {
                     b.classList.remove('active');
                 });
-                btn.classList.add('active');
+                allCategoryBtn.classList.add('active');
                 
                 // 应用类别筛选
-                const category = btn.getAttribute('data-category');
-                filterByCategory(category);
+                filterByCategory('');
             });
-        });
+        }
 
         // 添加滚动事件监听，实现无限滚动
         window.addEventListener('scroll', handleInfiniteScroll);
@@ -282,9 +281,7 @@ function loadProducts(searchQuery = '', resetPage = true) {
     // 清空之前的错误信息
     if (errorMessage) {
         errorMessage.style.display = 'none';
-    }
-
-    // 构建API URL，添加搜索参数和分页参数
+    }    // 构建API URL，添加搜索参数和分页参数
     const params = new URLSearchParams();
     const { page, limit } = window.currentState.pagination;
     
@@ -379,48 +376,67 @@ function appendProducts(products) {
             imageUrl = `/${imageUrl}`;
         }
         
-        // 简化产品卡片内容，提高展示密度
+        // 修改产品卡片内容，移除直接加入购物车按钮，仅保留"查看详情"按钮
         productElement.innerHTML = `
             <img src="${imageUrl}" alt="${product.name}" onerror="this.src='/images/default-product.jpg'"/>
             <h3 title="${product.name}">${product.name}</h3>
             <p class="price">¥${product.price}</p>
             <div class="button-group">
-                <button class="view-details" data-id="${product.id}">查看</button>
-                <button class="add-to-cart" data-id="${product.id}">加购</button>
+                <button class="view-details" data-id="${product.id}">查看详情</button>
             </div>
         `;
         
         productList.appendChild(productElement);
     });
     
-    // 绑定按钮事件
+    // 绑定查看详情按钮事件
     document.querySelectorAll('.view-details:not([data-bound])').forEach(button => {
         button.setAttribute('data-bound', 'true');
         button.addEventListener('click', () => {
             const productId = button.getAttribute('data-id');
+            
+            // 记录商品浏览事件
+            logProductView(productId);
+            
+            // 跳转到商品详情页
             window.location.href = `productDetails.html?id=${productId}`;
         });
     });
     
-    document.querySelectorAll('.add-to-cart:not([data-bound])').forEach(button => {
-        button.setAttribute('data-bound', 'true');
-        button.addEventListener('click', (e) => {
-            e.stopPropagation(); // 防止点击冒泡
-            const productId = button.getAttribute('data-id');
-            addToCart(productId);
-        });
-    });
-    
-    // 添加卡片整体点击事件
+    // 添加卡片整体点击事件，点击卡片任何位置都跳转到详情页
     document.querySelectorAll('.product-item:not([data-bound])').forEach(card => {
         card.setAttribute('data-bound', 'true');
         card.addEventListener('click', (e) => {
-            if (!e.target.classList.contains('add-to-cart')) {
-                const detailsBtn = card.querySelector('.view-details');
-                const productId = detailsBtn.getAttribute('data-id');
-                window.location.href = `productDetails.html?id=${productId}`;
-            }
+            const detailsBtn = card.querySelector('.view-details');
+            const productId = detailsBtn.getAttribute('data-id');
+            
+            // 记录商品浏览事件
+            logProductView(productId);
+            
+            // 跳转到商品详情页
+            window.location.href = `productDetails.html?id=${productId}`;
         });
+    });
+}
+
+// 记录商品浏览事件
+function logProductView(productId) {
+    const token = localStorage.getItem('token');
+    
+    // 即使未登录也记录浏览数据
+    fetch('http://localhost:3000/api/activity/log-view', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({
+            productId: parseInt(productId)
+        })
+    })
+    .catch(error => {
+        console.error('记录浏览数据失败:', error);
+        // 静默失败，不影响用户体验
     });
 }
 
@@ -546,4 +562,67 @@ function addToCart(productId) {
             button.textContent = '加购';
         }
     });
+}
+
+// 从服务器获取类别并渲染类别筛选按钮
+async function fetchCategories() {
+    try {
+        const response = await fetch('http://localhost:3000/api/products/categories/all');
+        if (!response.ok) {
+            throw new Error(`获取类别失败: ${response.status}`);
+        }
+        const data = await response.json();
+        
+        // 清空类别骨架屏
+        const categoryButtonsContainer = document.getElementById('category-buttons-container');
+        categoryButtonsContainer.innerHTML = '';
+        
+        if (data.success) {
+            let categoryNames = [];
+            
+            // 优先使用完整的类别数据
+            if (data.categoriesData && Array.isArray(data.categoriesData)) {
+                categoryNames = data.categoriesData.map(category => category.name);
+            } 
+            // 兼容旧格式
+            else if (data.categories && Array.isArray(data.categories)) {
+                categoryNames = data.categories;
+            }
+            
+            // 渲染类别按钮
+            categoryNames.forEach(categoryName => {
+                const categoryBtn = document.createElement('button');
+                categoryBtn.className = 'category-btn';
+                categoryBtn.setAttribute('data-category', categoryName);
+                categoryBtn.textContent = categoryName;
+                
+                // 绑定点击事件
+                categoryBtn.addEventListener('click', () => {
+                    // 更新按钮状态
+                    document.querySelectorAll('.category-btn').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    categoryBtn.classList.add('active');
+                    
+                    // 应用类别筛选
+                    filterByCategory(categoryName);
+                });
+                
+                categoryButtonsContainer.appendChild(categoryBtn);
+            });
+        }
+    } catch (error) {
+        console.error('加载类别失败:', error);
+        document.getElementById('category-buttons-container').innerHTML = `
+            <div class="category-error">
+                <p>加载类别失败</p>
+                <button id="retry-categories">重试</button>
+            </div>
+        `;
+        
+        // 绑定重试按钮
+        document.getElementById('retry-categories').addEventListener('click', () => {
+            fetchCategories();
+        });
+    }
 }

@@ -65,6 +65,21 @@ router.get('/inventory-alerts', salesAuth, async (req, res) => {
 // 获取产品转化率
 router.get('/conversion-report/:categoryId', salesAuth, salesStatsController.getConversionReport);
 
+// 获取销售类别业绩数据
+router.get('/categories/performance', salesAuth, async (req, res) => {
+  return salesStatsController.getCategoryPerformanceForSales(req, res);
+});
+
+// 获取销售人员负责的类别
+router.get('/assigned-categories/:salesId', salesAuth, async (req, res) => {
+  return salesStatsController.getAssignedCategories(req, res);
+});
+
+// 获取销售人员负责的产品
+router.get('/:salesId/products', salesAuth, async (req, res) => {
+  return salesStatsController.getSalesStaffProducts(req, res);
+});
+
 /**
  * 销售日志查询路由
  */

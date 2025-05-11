@@ -1,6 +1,7 @@
 const db = require('../models');
 const bcrypt = require('bcryptjs');
 const { Op } = require('sequelize');
+const CategoryHelper = require('../services/categoryHelper');
 
 /**
  * 销售人员管理控制器
@@ -121,9 +122,7 @@ class SalesStaffController {
    * 获取所有销售人员列表
    * @param {Object} req - 请求对象
    * @param {Object} res - 响应对象
-   */
-  async getAllSalesStaff(req, res) {
-    try {
+   */  async getAllSalesStaff(req, res) {    try {
       const salesStaff = await db.User.findAll({
         where: { role: 'sales' },
         attributes: ['id', 'username', 'email', 'createdAt', 'updatedAt', 'isActive'],
@@ -138,21 +137,19 @@ class SalesStaffController {
       });
       
       // 获取每个销售人员负责的产品类别数量
-      const staffWithMetrics = await Promise.all(salesStaff.map(async (staff) => {
-        // 查询分配给该销售人员的所有产品
+      const staffWithMetrics = await Promise.all(salesStaff.map(async (staff) => {        // 查询分配给该销售人员的所有产品
         const assignedProducts = await db.SalesProductAssignment.findAll({
           where: { salesId: staff.id },
           include: [
             {
               model: db.Product,
               as: 'product',
-              attributes: ['id', 'categoryId']
+              attributes: ['id', 'category']
             }
           ]
         });
-        
-        // 计算分配的唯一产品类别数量
-        const uniqueCategories = new Set(assignedProducts.map(ap => ap.product.categoryId));
+          // 计算分配的唯一产品类别数量
+        const uniqueCategories = new Set(assignedProducts.map(ap => ap.product.category));
         
         // 计算上个月的销售业绩
         const lastMonth = new Date();
@@ -187,10 +184,9 @@ class SalesStaffController {
           lastMonthSales: monthlySales
         };
       }));
-      
-      res.status(200).json({
+        res.status(200).json({
         success: true,
-        data: staffWithMetrics
+        salesStaff: staffWithMetrics
       });
     } catch (error) {
       console.error('Error fetching sales staff:', error);
@@ -211,16 +207,15 @@ class SalesStaffController {
     try {
       const { id } = req.params;
       
-      const salesStaff = await db.User.findOne({
-        where: { 
+      const salesStaff = await db.User.findOne({        where: { 
           id: id,
           role: 'sales'
-        },
-        attributes: ['id', 'username', 'email', 'createdAt', 'updatedAt', 'isActive'],
+        },        attributes: ['id', 'username', 'email', 'createdAt', 'updatedAt'],
         include: [
           {
             model: db.UserProfile,
-            as: 'profile'
+            as: 'profile',
+            attributes: ['userId', 'region', 'totalSpent', 'favoriteCategory']
           }
         ]
       });
@@ -231,33 +226,35 @@ class SalesStaffController {
           message: 'Sales staff not found'
         });
       }
-      
-      // 查询分配给该销售人员的所有产品
+        // 查询分配给该销售人员的所有产品
       const assignedProducts = await db.SalesProductAssignment.findAll({
         where: { salesId: id },
         include: [
           {
             model: db.Product,
             as: 'product',
-            attributes: ['id', 'name', 'categoryId', 'price', 'stock']
+            attributes: ['id', 'name', 'category', 'price', 'stock']
           }
         ]
       });
-      
-      // 获取分配的产品类别
-      const assignedCategoryIds = [
-        ...new Set(assignedProducts.map(ap => ap.product.categoryId))
+        // 获取分配的产品类别
+      const assignedCategories = [
+        ...new Set(assignedProducts.map(ap => ap.product.category))
       ];
       
       // 获取类别信息
       const categories = [];
-      if (assignedCategoryIds.length > 0) {
-        // 这里假设有一个Category模型，实际应根据项目结构调整
-        for (const categoryId of assignedCategoryIds) {
-          categories.push({
-            id: categoryId,
-            productCount: assignedProducts.filter(ap => ap.product.categoryId === categoryId).length
-          });
+      if (assignedCategories.length > 0) {
+        // 查询类别ID
+        for (const categoryName of assignedCategories) {
+          const category = await db.Category.findOne({ where: { name: categoryName } });
+          if (category) {
+            categories.push({
+              id: category.id,
+              name: categoryName,
+              productCount: assignedProducts.filter(ap => ap.product.category === categoryName).length
+            });
+          }
         }
       }
       
@@ -288,20 +285,23 @@ class SalesStaffController {
         totalSales: recentOrders.reduce((sum, item) => sum + (item.price * item.quantity), 0),
         totalOrders: new Set(recentOrders.map(item => item.orderId)).size,
         totalQuantity: recentOrders.reduce((sum, item) => sum + item.quantity, 0)
-      };
-      
-      res.status(200).json({
+      };      res.status(200).json({
         success: true,
-        data: {
+        salesStaff: {
           ...salesStaff.toJSON(),
           categories,
-          assignedProducts: assignedProducts.map(ap => ({
-            productId: ap.productId,
-            productName: ap.product.name,
-            categoryId: ap.product.categoryId,
-            price: ap.product.price,
-            stock: ap.product.stock
-          })),
+          products: assignedProducts.map(ap => {
+            // 找到对应的类别ID
+            const category = categories.find(cat => cat.name === ap.product.category);
+            return {
+              id: ap.productId,
+              name: ap.product.name,
+              categoryId: category ? category.id : null,
+              category: ap.product.category,
+              price: ap.product.price,
+              stock: ap.product.stock
+            };
+          }),
           salesMetrics
         }
       });
@@ -594,15 +594,26 @@ class SalesStaffController {
       
       // 创建事务
       const transaction = await db.sequelize.transaction();
-      
-      try {
+        try {
         let productsToAssign = [];
         
         // 如果提供了类别ID，则查询这些类别下的所有产品
         if (categoryIds && categoryIds.length > 0) {
+          // 先获取类别名称
+          const categories = await db.Category.findAll({
+            where: {
+              id: { [Op.in]: categoryIds }
+            },
+            attributes: ['id', 'name'],
+            transaction
+          });
+          
+          const categoryNames = categories.map(c => c.name);
+          
+          // 根据类别名称查找产品
           const productsByCategory = await db.Product.findAll({
             where: {
-              categoryId: { [Op.in]: categoryIds }
+              category: { [Op.in]: categoryNames }
             },
             attributes: ['id'],
             transaction
@@ -717,12 +728,23 @@ class SalesStaffController {
       
       try {
         let productsToUnassign = [];
-        
-        // 如果提供了类别ID，则查询这些类别下的所有产品
+          // 如果提供了类别ID，则查询这些类别下的所有产品
         if (categoryIds && categoryIds.length > 0) {
+          // 先获取类别名称
+          const categories = await db.Category.findAll({
+            where: {
+              id: { [Op.in]: categoryIds }
+            },
+            attributes: ['id', 'name'],
+            transaction
+          });
+          
+          const categoryNames = categories.map(c => c.name);
+          
+          // 根据类别名称查找产品
           const productsByCategory = await db.Product.findAll({
             where: {
-              categoryId: { [Op.in]: categoryIds }
+              category: { [Op.in]: categoryNames }
             },
             attributes: ['id'],
             transaction

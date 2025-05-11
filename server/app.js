@@ -15,6 +15,7 @@ const adminRoutes = require('./routes/adminRoutes');
 const salesRoutes = require('./routes/salesRoutes');
 const salesStaffRoutes = require('./routes/salesStaffRoutes');
 const salesReportRoutes = require('./routes/salesReportRoutes');
+const customerRoutes = require('./routes/customerRoutes');
 const sequelize = require('./config/database');
 const db = require('./models'); // 导入并初始化模型关联
 const rootDir = path.resolve(__dirname, '..'); 
@@ -22,6 +23,7 @@ const rootDir = path.resolve(__dirname, '..');
 // 导入自定义中间件
 const activityLogger = require('./config/middleware/activityLogger');
 const trackUserView = require('./config/middleware/trackUserView').trackUserView;
+const contentTypeMiddleware = require('./config/middleware/contentTypeMiddleware');
 
 // 中间件
 app.use(express.json());  // 解析 JSON 请求体
@@ -51,6 +53,9 @@ app.use(activityLogger);
 // 应用用户浏览跟踪中间件
 app.use(trackUserView);
 
+// 应用Content-Type中间件确保API路由始终返回JSON
+app.use('/api', contentTypeMiddleware);
+
 // 配置静态文件服务
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 app.use('/images', express.static(path.join(__dirname, 'public/images')));
@@ -59,6 +64,10 @@ app.use('/images', express.static(path.join(__dirname, 'public/images')));
 app.use('/api/users', userRoutes);
 // 注册产品相关路由
 app.use('/api/products', productRoutes);
+// 注册类别相关路由
+app.use('/api/categories', require('./routes/categoryRoutes'));
+// 注册客户相关路由
+app.use('/api/customers', customerRoutes);
 
 app.use('/api/orders', orderRoutes);
 app.use('/api/cart', cartRoutes);
@@ -68,8 +77,8 @@ app.use('/api/recommendations', recommendationRoutes);
 // 注册新的路由
 app.use('/api/admin', adminRoutes);
 app.use('/api/sales', salesRoutes);
-app.use('/sales-staff', salesStaffRoutes);
-app.use('/sales-reports', salesReportRoutes);
+app.use('/api/sales-staff', salesStaffRoutes);
+app.use('/api/sales-reports', salesReportRoutes);
 
 // 提供 public 目录中的静态文件
 app.use(express.static(path.join(rootDir, 'public')));

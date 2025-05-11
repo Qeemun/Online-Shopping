@@ -25,6 +25,60 @@ const checkSalesOrAdminRole = (req, res, next) => {
     });
 };
 
+// 获取销售概览数据
+router.get('/overview', verifyToken(), async (req, res) => {
+    try {
+        console.log('请求销售概览数据');
+        const { startDate, endDate } = req.query;
+        
+        // 获取总销售额
+        const totalRevenue = await salesReportController.getTotalSales(startDate, endDate);
+        
+        // 获取总订单数
+        const totalOrdersResponse = await salesReportController.getTotalOrders(startDate, endDate);
+        const totalOrders = totalOrdersResponse || 0;
+        
+        // 计算平均订单金额
+        const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+          // 获取总销售数量
+        const totalQuantityResponse = await salesReportController.getTotalQuantity(startDate, endDate);
+        const totalQuantity = totalQuantityResponse || 0;
+          
+        // 创建一个与API请求结构相似的对象，以便内部调用
+        const fakeTrendReq = { 
+            query: { 
+                startDate, 
+                endDate, 
+                period: 'day' 
+            } 
+        };
+        
+        // 获取销售趋势 - 使用正确的参数格式调用内部方法
+        const salesTrend = await salesReportController.getSalesTrend(fakeTrendReq, null, true);
+        
+        res.json({
+            success: true,
+            summary: {
+                totalRevenue,
+                totalOrders,
+                avgOrderValue,
+                totalQuantity
+            },
+            salesTrend,
+            totalRevenue,
+            orderCount: totalOrders,
+            totalQuantity
+        });
+    } catch (error) {
+        console.error('获取销售概览数据失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '获取销售概览数据失败',
+            error: error.message
+        });
+    }
+});
+
 // 获取总销售额
 router.get('/total-sales', async (req, res) => {
     const { startDate, endDate } = req.query;
@@ -60,5 +114,85 @@ router.get('/sales-trend', verifyToken(), salesReportController.getSalesTrend);
 
 // 获取畅销商品数据
 router.get('/top-products', verifyToken(), salesReportController.getTopProducts);
+
+// 获取销售概览数据 - 添加别名路由用于兼容前端
+router.get('/sales-overview', verifyToken(), async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+        
+        // 获取总销售额
+        const totalRevenue = await salesReportController.getTotalSales(startDate, endDate);
+        
+        // 获取总订单数
+        const totalOrders = await salesReportController.getTotalOrders(startDate, endDate) || 0;
+          // 获取总销售数量
+        const totalQuantity = await salesReportController.getTotalQuantity(startDate, endDate) || 0;
+          
+        // 创建一个与API请求结构相似的对象，以便内部调用
+        const fakeTrendReq = { 
+            query: { 
+                startDate, 
+                endDate, 
+                period: 'day' 
+            } 
+        };
+        
+        // 获取销售趋势 - 使用正确的参数格式调用内部方法
+        const salesTrend = await salesReportController.getSalesTrend(fakeTrendReq, null, true);
+        
+        res.json({
+            success: true,
+            totalRevenue,
+            orderCount: totalOrders,
+            totalQuantity,
+            salesTrend
+        });
+    } catch (error) {
+        console.error('获取销售概览失败：', error);
+        res.status(500).json({
+            success: false,
+            message: '获取销售概览数据失败',
+            error: error.message
+        });
+    }
+});
+
+// 获取所有商品类别列表
+router.get('/category-list', verifyToken(), async (req, res) => {
+    try {
+        // 查询所有不同的商品类别
+        const db = require('../models');
+        const { Op } = db.Sequelize;
+        
+        console.log('开始查询商品类别列表...');
+        
+        const categories = await db.Product.findAll({
+            attributes: [[db.sequelize.fn('DISTINCT', db.sequelize.col('category')), 'category']],
+            where: {
+                category: {
+                    [Op.not]: null,
+                    [Op.ne]: '' // 排除空类别
+                }
+            },
+            raw: true
+        });
+        
+        // 提取类别名称
+        const categoryList = categories.map(item => item.category).filter(Boolean);
+        console.log(`找到 ${categoryList.length} 个商品类别`);
+        
+        res.status(200).json({
+            success: true,
+            categories: categoryList
+        });
+    } catch (error) {
+        console.error('获取类别列表失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '获取类别列表失败',
+            error: error.message
+        });
+    }
+});
 
 module.exports = router;

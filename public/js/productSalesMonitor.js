@@ -14,6 +14,22 @@ let charts = {
     categoryStockChart: null,
     salesTrendChart: null
 };
+// 添加salesData全局变量，避免undefined错误
+let salesData = [];
+
+// 日志函数
+function logMessage(message, type = 'info') {
+    const timestamp = new Date().toISOString();
+    const logPrefix = `[${timestamp}] [${type.toUpperCase()}]`;
+    
+    if (type === 'error') {
+        console.error(`${logPrefix} ${message}`);
+    } else if (type === 'warn') {
+        console.warn(`${logPrefix} ${message}`);
+    } else {
+        console.log(`${logPrefix} ${message}`);
+    }
+}
 
 // 分页状态
 let pagination = {
@@ -141,39 +157,58 @@ async function loadCategories() {
     try {
         const token = localStorage.getItem('token');
         const user = JSON.parse(localStorage.getItem('user'));
-        if (!token || !user) return;
+        logMessage('开始加载商品类别', 'info');
+        
+        if (!token || !user) {
+            logMessage('用户未登录或缺少token', 'error');
+            return;
+        }
         
         let url = 'http://localhost:3000/api/products/categories/all';
         
         // 如果是销售人员，只加载其负责的类别
         if (user.role === 'sales') {
             url = `http://localhost:3000/api/sales/assigned-categories/${user.id}`;
+            logMessage(`销售人员模式：请求 ${url}`, 'info');
+        } else {
+            logMessage(`管理员模式：请求 ${url}`, 'info');
         }
         
+        logMessage(`开始发送请求到: ${url}`, 'info');
         const response = await fetch(url, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
         
+        logMessage(`API响应状态: ${response.status} ${response.statusText}`, 'info');
+        
         if (!response.ok) {
-            throw new Error('获取商品类别失败');
+            logMessage(`API调用失败: ${response.status} ${response.statusText}`, 'error');
+            throw new Error(`获取商品类别失败: ${response.status} ${response.statusText}`);
         }
         
         const data = await response.json();
+        logMessage(`收到API响应数据: ${JSON.stringify(data).substring(0, 200)}...`, 'info');
         
         if (!data.success) {
+            logMessage(`API返回错误: ${data.message || '未知错误'}`, 'error');
             throw new Error(data.message || '获取商品类别失败');
         }
         
         // 填充类别筛选器
         const categoryFilter = document.getElementById('category-filter');
-        if (!categoryFilter) return;
+        if (!categoryFilter) {
+            logMessage('找不到category-filter元素', 'warn');
+            return;
+        }
         
         // 清空现有选项(保留"所有类别"选项)
         categoryFilter.innerHTML = '<option value="">所有类别</option>';
         
         const categories = data.categories || [];
+        logMessage(`加载到 ${categories.length} 个类别`, 'info');
+        
         categories.forEach(category => {
             const option = document.createElement('option');
             option.value = category;
@@ -182,6 +217,7 @@ async function loadCategories() {
         });
     } catch (error) {
         console.error('加载类别失败:', error);
+        logMessage(`加载类别失败: ${error.message}`, 'error');
         salesUtils.showNotification('加载商品类别失败: ' + error.message, 'error');
     }
 }
@@ -796,10 +832,21 @@ function loadSalesStaffOptions() {
 // 加载类别销售业绩数据
 async function loadCategorySalesPerformance() {
     showLoadingOverlay();
+    logMessage('开始加载类别销售业绩数据', 'info');
+    
+    // 确保categoryUtils已初始化
+    if (!categoryUtils.initialized) {
+        logMessage('等待categoryUtils初始化...', 'info');
+        await categoryUtils.initialize();
+        logMessage('categoryUtils初始化完成', 'info');
+    }
     
     const token = localStorage.getItem('token');
     const user = JSON.parse(localStorage.getItem('user'));
-    if (!token || !user) return;
+    if (!token || !user) {
+        logMessage('用户未登录或缺少token', 'error');
+        return;
+    }
     
     const startDate = document.getElementById('start-date').value;
     const endDate = document.getElementById('end-date').value;
@@ -815,12 +862,15 @@ async function loadCategorySalesPerformance() {
         // 如果是销售人员，只查询其负责的类别
         if (user.role === 'sales') {
             params.append('salesId', user.id);
+            logMessage(`销售人员模式: 添加销售ID ${user.id} 到请求`, 'info');
         }
         
         const queryString = params.toString();
         if (queryString) {
             apiUrl += `?${queryString}`;
         }
+        
+        logMessage(`请求URL: ${apiUrl}`, 'info');
         
         const response = await fetch(apiUrl, {
             headers: {
@@ -829,19 +879,35 @@ async function loadCategorySalesPerformance() {
             }
         });
         
+        logMessage(`API响应状态: ${response.status} ${response.statusText}`, 'info');
+        
         if (!response.ok) {
-            throw new Error('获取类别销售业绩失败');
+            logMessage(`API调用失败: ${response.status} ${response.statusText}`, 'error');
+            throw new Error(`获取类别销售业绩失败: ${response.status} ${response.statusText}`);
         }
         
-        const data = await response.json();
+        const responseText = await response.text();
+        logMessage(`API原始响应: ${responseText.substring(0, 200)}...`, 'info');
+        
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (parseError) {
+            logMessage(`JSON解析失败: ${parseError.message}`, 'error');
+            logMessage(`返回的非JSON内容: ${responseText.substring(0, 500)}`, 'error');
+            throw new Error(`解析API响应失败: ${parseError.message}`);
+        }
+        
         hideLoadingOverlay();
         
         if (data.success) {
+            logMessage(`成功获取类别业绩数据: ${data.categoryPerformance?.length || 0} 条记录`, 'info');
             // 显示类别销售业绩数据
             displayCategoryPerformance(data.categoryPerformance);
             
             // 显示时间序列销售趋势
             if (data.salesTrend) {
+                logMessage(`成功获取销售趋势数据: ${data.salesTrend.length || 0} 条记录`, 'info');
                 displaySalesTrend(data.salesTrend);
             }
             
@@ -861,35 +927,60 @@ async function loadCategorySalesPerformance() {
 
 // 加载特定销售人员的类别销售业绩
 async function loadSalesStaffCategoryPerformance(staffId) {
-    if (!staffId) return;
+    if (!staffId) {
+        logMessage('未提供销售人员ID', 'error');
+        return;
+    }
     
+    logMessage(`开始加载销售人员(ID: ${staffId})的类别业绩数据`, 'info');
     showLoadingOverlay();
     
     const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!token) {
+        logMessage('用户未登录或缺少token', 'error');
+        return;
+    }
     
     const startDate = document.getElementById('start-date').value;
     const endDate = document.getElementById('end-date').value;
     
     try {
         // 获取销售人员信息
-        const staffResponse = await fetch(`http://localhost:3000/api/sales-staff/${staffId}`, {
+        const staffApiUrl = `http://localhost:3000/api/sales-staff/${staffId}`;
+        logMessage(`请求销售人员信息: ${staffApiUrl}`, 'info');
+        
+        const staffResponse = await fetch(staffApiUrl, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             }
         });
         
+        logMessage(`销售人员API响应状态: ${staffResponse.status} ${staffResponse.statusText}`, 'info');
+        
         if (!staffResponse.ok) {
-            throw new Error('获取销售人员信息失败');
+            logMessage(`获取销售人员信息失败: ${staffResponse.status} ${staffResponse.statusText}`, 'error');
+            throw new Error(`获取销售人员信息失败: ${staffResponse.status} ${staffResponse.statusText}`);
         }
         
-        const staffData = await staffResponse.json();
+        const staffResponseText = await staffResponse.text();
+        logMessage(`销售人员API原始响应: ${staffResponseText.substring(0, 200)}...`, 'info');
+        
+        let staffData;
+        try {
+            staffData = JSON.parse(staffResponseText);
+        } catch (parseError) {
+            logMessage(`JSON解析失败: ${parseError.message}`, 'error');
+            logMessage(`返回的非JSON内容: ${staffResponseText.substring(0, 500)}`, 'error');
+            throw new Error(`解析销售人员API响应失败: ${parseError.message}`);
+        }
         
         if (staffData.success) {
             // 设置销售人员名称
             document.getElementById('staff-name').textContent = staffData.salesStaff.username;
+            logMessage(`已设置销售人员名称: ${staffData.salesStaff.username}`, 'info');
         } else {
+            logMessage(`获取销售人员信息API返回错误: ${staffData.message || '未知错误'}`, 'error');
             throw new Error(staffData.message || '获取销售人员信息失败');
         }
         
@@ -905,6 +996,8 @@ async function loadSalesStaffCategoryPerformance(staffId) {
             apiUrl += `?${queryString}`;
         }
         
+        logMessage(`请求业绩数据URL: ${apiUrl}`, 'info');
+        
         const response = await fetch(apiUrl, {
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -912,11 +1005,25 @@ async function loadSalesStaffCategoryPerformance(staffId) {
             }
         });
         
+        logMessage(`业绩数据API响应状态: ${response.status} ${response.statusText}`, 'info');
+        
         if (!response.ok) {
-            throw new Error('获取销售人员类别业绩失败');
+            logMessage(`获取销售人员类别业绩失败: ${response.status} ${response.statusText}`, 'error');
+            throw new Error(`获取销售人员类别业绩失败: ${response.status} ${response.statusText}`);
         }
         
-        const data = await response.json();
+        const responseText = await response.text();
+        logMessage(`业绩数据API原始响应: ${responseText.substring(0, 200)}...`, 'info');
+        
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (parseError) {
+            logMessage(`JSON解析失败: ${parseError.message}`, 'error');
+            logMessage(`返回的非JSON内容: ${responseText.substring(0, 500)}`, 'error');
+            throw new Error(`解析业绩数据API响应失败: ${parseError.message}`);
+        }
+        
         hideLoadingOverlay();
         
         if (data.success) {
@@ -928,6 +1035,7 @@ async function loadSalesStaffCategoryPerformance(staffId) {
                 displaySalesTrend(data.salesTrend, true);
             }
         } else {
+            logMessage(`获取销售人员类别业绩API返回错误: ${data.message || '未知错误'}`, 'error');
             throw new Error(data.message || '获取销售人员类别业绩失败');
         }
     } catch (error) {
@@ -964,20 +1072,29 @@ function displayCategoryPerformance(categoryData, isStaffView = false) {
     
     // 填充表格并收集图表数据
     categoryData.forEach(category => {
+        // 使用categoryUtils获取类别ID (如果尚未添加)
+        if (!category.categoryId && categoryUtils.initialized) {
+            category.categoryId = categoryUtils.getCategoryId(category.category);
+        }
+        
         const row = document.createElement('tr');
         
         // 计算平均客单价
         const avgOrderValue = category.orderCount > 0 
             ? (category.totalRevenue / category.orderCount).toFixed(2) 
             : 0;
+            
+        // 兼容两种命名格式：soldQuantity/salesQuantity 和 stockQuantity/currentStock
+        const soldQty = category.soldQuantity || category.salesQuantity || 0;  
+        const stockQty = category.stockQuantity || category.currentStock || 0;
         
         row.innerHTML = `
             <td>${category.category || '未分类'}</td>
             <td>¥${category.totalRevenue.toFixed(2)}</td>
             <td>${category.orderCount}</td>
-            <td>${category.soldQuantity}</td>
+            <td>${soldQty}</td>
             <td>¥${avgOrderValue}</td>
-            <td>${category.stockQuantity || '未知'}</td>
+            <td>${stockQty}</td>
         `;
         
         targetTableBody.appendChild(row);
@@ -985,10 +1102,8 @@ function displayCategoryPerformance(categoryData, isStaffView = false) {
         // 收集图表数据
         categories.push(category.category || '未分类');
         revenues.push(parseFloat(category.totalRevenue.toFixed(2)));
-        quantities.push(category.soldQuantity);
-        if (category.stockQuantity) {
-            stocks.push(category.stockQuantity);
-        }
+        quantities.push(soldQty);
+        stocks.push(stockQty);
     });
     
     // 更新图表

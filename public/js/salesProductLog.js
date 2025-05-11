@@ -8,32 +8,21 @@ document.addEventListener('DOMContentLoaded', function() {
     // 检查用户登录状态和权限
     salesUtils.checkAuthAndPermission(['sales', 'admin']);
     
-    // 初始化侧边栏菜单权限
-    setupSidebarByRole();
+    // 显示当前登录用户
+    displayCurrentUser();
     
     // 初始化日志页面功能
     initLogPage();
 });
 
 /**
- * 根据用户角色设置侧边栏菜单
+ * 显示当前登录的用户信息
  */
-function setupSidebarByRole() {
+function displayCurrentUser() {
     const user = JSON.parse(localStorage.getItem('user'));
-    if (!user) return;
-    
-    // 管理员可以查看所有菜单
-    if (user.role === 'admin') {
-        document.getElementById('sales-staff-mgmt').style.display = 'block';
-        document.getElementById('product-cat-mgmt').style.display = 'block';
-        document.getElementById('order-mgmt').style.display = 'block';
-        document.getElementById('customer-mgmt').style.display = 'block';
-        document.getElementById('reports-link').style.display = 'block';
-        document.getElementById('operation-logs').style.display = 'block';
-    } else if (user.role === 'sales') {
-        // 销售人员只能查看部分菜单
-        document.getElementById('reports-link').style.display = 'block';
-        document.getElementById('operation-logs').style.display = 'block';
+    if (user) {
+        const userSpan = document.getElementById('current-user');
+        userSpan.textContent = `${user.username} (${user.role === 'admin' ? '管理员' : '销售员'})`;
     }
 }
 
@@ -48,11 +37,7 @@ function initLogPage() {
         window.location.href = 'login.html';
         return;
     }
-    
-    // 初始化过滤器面板折叠功能
-    initFilterPanel();
-    
-    // 初始化标签页切换功能
+      // 初始化标签页切换功能
     initTabs();
     
     // 加载商品类别
@@ -66,46 +51,38 @@ function initLogPage() {
     // 初始化日期选择器为过去30天
     initDateRange();
     
-    // 绑定过滤表单提交事件
-    document.getElementById('log-filter-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        // 获取当前选中的标签页
-        const activeTab = document.querySelector('.tab.active').getAttribute('data-tab');
-        
-        // 根据当前标签页加载对应日志
-        if (activeTab === 'view-logs') {
-            loadViewLogs();
+    // 设置日期范围选择
+    document.getElementById('date-range').addEventListener('change', function() {
+        const customDateContainer = document.getElementById('custom-date-container');
+        if (this.value === 'custom') {
+            customDateContainer.style.display = 'flex';
         } else {
-            loadPurchaseLogs();
+            customDateContainer.style.display = 'none';
+            // 自动应用选定的日期范围
+            setDateRangeFromSelection(this.value);
         }
     });
+      // 设置搜索按钮点击
+    document.getElementById('search-logs').addEventListener('click', function() {
+        applyFilters();
+    });
     
-    // 绑定表单重置事件
-    document.getElementById('log-filter-form').addEventListener('reset', function() {
-        // 重置后延迟执行，确保表单值已被清空
-        setTimeout(() => {
-            initDateRange(); // 重置为过去30天
-            loadCategories(); // 重新加载类别
-        }, 10);
+    // 重置过滤器
+    document.getElementById('reset-filters').addEventListener('click', function() {
+        resetFilters();
+        applyFilters();
+    });
+    
+    // 应用自定义日期范围
+    document.getElementById('apply-date-range').addEventListener('click', function() {
+        applyFilters();
     });
     
     // 初始化加载数据
     loadViewLogs();
 }
 
-/**
- * 初始化过滤器面板折叠功能
- */
-function initFilterPanel() {
-    const toggleBtn = document.getElementById('toggle-filters');
-    const filterContent = document.getElementById('filter-content');
-    
-    toggleBtn.addEventListener('click', function() {
-        filterContent.classList.toggle('collapsed');
-        toggleBtn.classList.toggle('collapsed');
-    });
-}
+// 删除initFilterPanel函数，因为新的UI不再需要折叠功能
 
 /**
  * 初始化标签页切换功能
@@ -307,9 +284,8 @@ function loadViewLogs(page = 1) {
     const queryString = Object.entries(params)
         .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
         .join('&');
-    
-    // 请求获取浏览日志
-    fetch(`http://localhost:3000/api/logs/product-views?${queryString}`, {
+      // 请求获取浏览日志
+    fetch(`http://localhost:3000/api/sales/logs/product-views?${queryString}`, {
         headers: {
             'Authorization': `Bearer ${token}`
         }
@@ -324,12 +300,11 @@ function loadViewLogs(page = 1) {
             
             // 渲染日志数据
             data.data.forEach(log => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
+                const row = document.createElement('tr');                row.innerHTML = `
                     <td>${log.userId}</td>
                     <td>${log.user ? log.user.username : '未知用户'}</td>
                     <td>${log.product ? log.product.name : '未知商品'}</td>
-                    <td>${log.product ? log.product.categoryId : '未知类别'}</td>
+                    <td>${log.product ? log.product.category : '未知类别'}</td>
                     <td>${log.durationSeconds ? `${log.durationSeconds}秒` : '未记录'}</td>
                     <td>${formatDateTime(log.createdAt)}</td>
                     <td>${log.ipAddress || '未记录'}</td>
@@ -407,9 +382,8 @@ function loadPurchaseLogs(page = 1) {
     const queryString = Object.entries(params)
         .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
         .join('&');
-    
-    // 请求获取购买日志
-    fetch(`http://localhost:3000/api/logs/purchases?${queryString}`, {
+      // 请求获取购买日志
+    fetch(`http://localhost:3000/api/sales/logs/purchase?${queryString}`, {
         headers: {
             'Authorization': `Bearer ${token}`
         }
@@ -424,13 +398,12 @@ function loadPurchaseLogs(page = 1) {
             
             // 渲染日志数据
             data.data.forEach(log => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
+                const row = document.createElement('tr');                row.innerHTML = `
                     <td>${log.orderId}</td>
                     <td>${log.userId}</td>
                     <td>${log.user ? log.user.username : '未知用户'}</td>
                     <td>${log.product ? log.product.name : '未知商品'}</td>
-                    <td>${log.product ? log.product.categoryId : '未知类别'}</td>
+                    <td>${log.product ? log.product.category : '未知类别'}</td>
                     <td>¥${log.unitPrice.toFixed(2)}</td>
                     <td>${log.quantity}</td>
                     <td>¥${log.totalAmount.toFixed(2)}</td>
@@ -535,4 +508,71 @@ function renderPagination(elementId, pagination, loadFunction) {
         nextItem.addEventListener('click', () => loadFunction(page + 1));
     }
     paginationContainer.appendChild(nextItem);
+}
+
+/**
+ * 根据选择的日期范围设置开始和结束日期
+ * @param {string} rangeValue 日期范围值：7, 30, 90, 等
+ */
+function setDateRangeFromSelection(rangeValue) {
+    const today = new Date();
+    let startDate = new Date();
+    
+    switch (rangeValue) {
+        case '7':
+            startDate.setDate(today.getDate() - 7);
+            break;
+        case '30':
+            startDate.setDate(today.getDate() - 30);
+            break;
+        case '90':
+            startDate.setDate(today.getDate() - 90);
+            break;
+        case '365':
+            startDate.setDate(today.getDate() - 365);
+            break;
+        default:
+            startDate.setDate(today.getDate() - 30); // 默认30天
+    }
+    
+    // 更新日期选择器
+    document.getElementById('start-date').value = formatDate(startDate);
+    document.getElementById('end-date').value = formatDate(today);
+    
+    // 应用新的日期范围筛选
+    applyFilters();
+}
+
+/**
+ * 应用所有筛选条件并重新加载数据
+ */
+function applyFilters() {
+    // 获取当前选中的标签页
+    const activeTab = document.querySelector('.tab.active').getAttribute('data-tab');
+    
+    // 根据当前标签页加载对应日志
+    if (activeTab === 'view-logs') {
+        loadViewLogs();
+    } else {
+        loadPurchaseLogs();
+    }
+}
+
+/**
+ * 重置所有过滤器
+ */
+function resetFilters() {
+    // 重置日期范围
+    const dateRangeSelect = document.getElementById('date-range');
+    dateRangeSelect.value = '30';
+    
+    // 更新自定义日期容器可见性
+    document.getElementById('custom-date-container').style.display = 'none';
+    
+    // 重置日期为过去30天
+    setDateRangeFromSelection('30');
+    
+    // 重置类别和产品选择
+    document.getElementById('product-category').value = 'all';
+    document.getElementById('product').value = 'all';
 }

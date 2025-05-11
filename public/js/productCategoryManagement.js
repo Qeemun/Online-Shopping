@@ -18,7 +18,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 加载所有类别
     loadCategories();
-    
     // 设置图片预览事件监听器
     setupImagePreviews();
     
@@ -40,8 +39,8 @@ function checkAuth() {
     const user = JSON.parse(userStr);
     console.log('当前用户角色:', user.role); // 调试信息
     
-    // 检查用户是否为销售人员
-    if (user.role !== 'sales' ) {
+    // 检查用户是否为销售人员或管理员
+    if (user.role !== 'sales' && user.role !== 'admin') {
         alert('您无权访问此页面');
         window.location.href = 'index.html';
         return;
@@ -258,7 +257,7 @@ function loadCategoriesForProducts() {
     fetch('http://localhost:3000/api/products/categories/all')
         .then(response => response.json())
         .then(data => {
-            if (data.success && Array.isArray(data.categories)) {
+            if (data.success) {
                 const addCategorySelect = document.getElementById('product-category');
                 const editCategorySelect = document.getElementById('edit-product-category');
                 
@@ -266,12 +265,22 @@ function loadCategoriesForProducts() {
                 addCategorySelect.innerHTML = '<option value="">-- 选择种类 --</option>';
                 editCategorySelect.innerHTML = '<option value="">-- 选择种类 --</option>';
                 
-                // 添加所有类别
-                data.categories.forEach(category => {
-                    const option = `<option value="${category}">${category}</option>`;
-                    addCategorySelect.innerHTML += option;
-                    editCategorySelect.innerHTML += option;
-                });
+                // 优先使用详细的类别数据
+                if (data.categoriesData && Array.isArray(data.categoriesData)) {
+                    data.categoriesData.forEach(category => {
+                        const option = `<option value="${category.name}">${category.name}</option>`;
+                        addCategorySelect.innerHTML += option;
+                        editCategorySelect.innerHTML += option;
+                    });
+                } 
+                // 兼容旧格式
+                else if (Array.isArray(data.categories)) {
+                    data.categories.forEach(category => {
+                        const option = `<option value="${category}">${category}</option>`;
+                        addCategorySelect.innerHTML += option;
+                        editCategorySelect.innerHTML += option;
+                    });
+                }
             }
         })
         .catch(error => console.error('加载商品类别失败', error));
@@ -514,10 +523,29 @@ async function loadCategories() {
             throw new Error(data.message || '获取类别失败');
         }
         
+        // 准备类别数据数组
+        let categoriesList;
+        
+        // 优先使用服务器返回的详细类别数据
+        if (data.categoriesData && Array.isArray(data.categoriesData)) {
+            categoriesList = data.categoriesData.map(cat => ({
+                id: cat.id,
+                name: cat.name,
+                description: cat.description || ''
+            }));
+        } else {
+            // 兼容旧格式，使用类别名称列表
+            categoriesList = data.categories.map(categoryName => ({
+                id: categoryName, // 兼容旧代码，使用名称作为id
+                name: categoryName,
+                description: ''
+            }));
+        }
+        
         // 获取每个类别的商品数量
-        const categoriesWithCount = await Promise.all(data.categories.map(async (categoryName) => {
+        const categoriesWithCount = await Promise.all(categoriesList.map(async (category) => {
             try {
-                const countResponse = await fetch(`http://localhost:3000/api/products/category/${categoryName}`, {
+                const countResponse = await fetch(`http://localhost:3000/api/products/category/${category.name}`, {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -527,26 +555,20 @@ async function loadCategories() {
                 
                 if (!countResponse.ok) {
                     return {
-                        id: categoryName,
-                        name: categoryName,
-                        description: '',
+                        ...category,
                         productCount: 0
                     };
                 }
                 
                 const countData = await countResponse.json();
                 return {
-                    id: categoryName,
-                    name: categoryName,
-                    description: '',
+                    ...category,
                     productCount: countData.success ? countData.products.length : 0
                 };
             } catch (error) {
-                console.error(`获取类别 ${categoryName} 的商品数量失败:`, error);
+                console.error(`获取类别 ${category.name} 的商品数量失败:`, error);
                 return {
-                    id: categoryName,
-                    name: categoryName,
-                    description: '',
+                    ...category,
                     productCount: 0
                 };
             }
@@ -721,8 +743,8 @@ async function fetchCategoryDetails(categoryId) {
     try {
         const token = localStorage.getItem('token');
         
-        // 获取指定类别的商品，从中提取类别信息
-        const response = await fetch(`http://localhost:3000/api/products/category/${categoryId}`, {
+        // 尝试从API直接获取类别信息
+        const response = await fetch(`http://localhost:3000/api/products/categories/all`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -741,10 +763,58 @@ async function fetchCategoryDetails(categoryId) {
             throw new Error(data.message || '获取类别详情失败');
         }
         
+        // 如果返回了详细类别数据，尝试找到匹配的类别
+        if (data.categoriesData && Array.isArray(data.categoriesData)) {
+            // 先尝试通过ID查找
+            let category = data.categoriesData.find(cat => cat.id == categoryId);
+            
+            // 如果没找到，尝试通过名称查找
+            if (!category) {
+                category = data.categoriesData.find(cat => cat.name === categoryId);
+            }
+            
+            if (category) {
+                return {
+                    id: category.id,
+                    name: category.name,
+                    description: category.description || ''
+                };
+            }
+        }
+        
+        // 如果没有找到详细信息，使用类别名称列表
+        if (data.categories && data.categories.includes(categoryId)) {
+            // 返回构造的类别对象
+            return {
+                id: categoryId,
+                name: categoryId,
+                description: ''
+            };
+        }
+        
+        // 尝试从特定类别API获取信息
+        const catResponse = await fetch(`http://localhost:3000/api/products/category/${categoryId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!catResponse.ok) {
+            throw new Error('获取类别详情失败，状态码: ' + catResponse.status);
+        }
+        
+        const catData = await catResponse.json();
+        
+        if (!catData.success) {
+            throw new Error(catData.message || '获取类别详情失败');
+        }
+        
         // 返回构造的类别对象
         return {
-            id: data.category,
-            name: data.category,
+            id: catData.category,
+            name: catData.category,
             description: ''
         };
     } catch (error) {
@@ -756,21 +826,47 @@ async function fetchCategoryDetails(categoryId) {
 async function updateCategory(event) {
     event.preventDefault();
     
-    const categoryId = document.getElementById('edit-category-id').value;
-    const categoryName = document.getElementById('edit-category-name').value;
+    const oldCategoryName = document.getElementById('edit-category-id').value;
+    const newCategoryName = document.getElementById('edit-category-name').value;
     const categoryDescription = document.getElementById('edit-category-description').value;
     
     try {
         const token = localStorage.getItem('token');
         
-        // 暂时无法直接更新类别名称，可以考虑添加新类别并删除旧类别
-        showNotification('类别更新功能暂未实现，请手动删除并重新添加类别', 'info');
+        // 使用新的API端点更新类别
+        const response = await fetch(`http://localhost:3000/api/products/categories/${oldCategoryName}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name: newCategoryName,
+                description: categoryDescription
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('更新类别失败，状态码: ' + response.status);
+        }
+        
+        const data = await response.json();
+        console.log('更新类别响应:', data); // 调试信息
+        
+        if (!data.success) {
+            throw new Error(data.message || '更新类别失败');
+        }
         
         // 隐藏编辑模态框
         document.getElementById('edit-category-modal').style.display = 'none';
         
         // 重新加载类别列表
         loadCategories();
+        
+        // 同时刷新产品列表，因为产品的类别可能已经更改
+        loadProducts(true);
+        
+        showNotification('类别更新成功', 'success');
     } catch (error) {
         console.error('更新类别出错:', error);
         showNotification(error.message, 'error');
