@@ -9,7 +9,7 @@
 
 ### 前置要求
 - Node.js (v14.0.0以上)
-- MySQL或PostgreSQL数据库
+- MySQL数据库
 - npm管理工具
 
 ### 安装步骤
@@ -471,7 +471,7 @@
 ## 实现概述
 1. **后端实现**: 通过 Express 提供 RESTful API，并使用 Sequelize ORM 管理数据库模型和关联
 2. **前端实现**: 使用 JavaScript 和 CSS 构建动态界面，与后端 API 交互
-3. **数据库**: 使用 MySQL 或 PostgreSQL，通过Sequelize定义规范化表结构存储数据
+3. **数据库**: 使用 MySQL ，通过Sequelize定义规范化表结构存储数据
 4. **认证授权**: 使用 JWT (JSON Web Token) 实现用户认证和授权
 5. **文件上传**: 使用 multer 处理产品图片上传
 6. **电子邮件**: 使用 nodemailer 发送订单确认和通知邮件
@@ -503,7 +503,7 @@
   - Express.js：Web应用框架
 
 - **数据库**：
-  - MySQL/PostgreSQL：关系型数据库
+  - MySQL：关系型数据库
   - Sequelize ORM：对象关系映射，简化数据库操作
 
 - **安全与认证**：
