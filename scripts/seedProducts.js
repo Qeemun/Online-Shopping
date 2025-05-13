@@ -1,20 +1,40 @@
+// filepath: d:\JavaCode\Online-Shopping\scripts\seedProducts.js
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const { Faker, zh_CN } = require('@faker-js/faker');
 const faker = new Faker({ locale: [zh_CN] });
 
+// 导入数据库模型
 const db = require('../server/models');
 const { Product } = db;
 
+// 添加日志函数
+function log(message, isError = false) {
+  const timestamp = new Date().toISOString();
+  const prefix = isError ? '❌ ERROR' : '✅ INFO';
+  console.log(`[${timestamp}] ${prefix}: ${message}`);
+}
+
 (async () => {
-  const TOTAL_PRODUCTS = 200;
+  // 允许通过命令行参数设置产品数量
+  const TOTAL_PRODUCTS = process.argv[2] ? parseInt(process.argv[2]) : 200;
   const BATCH_SIZE = 100;
 
-  const categories = [
+  // 商品类别 - 使用与系统兼容的类别
+  // 这些类别应该与数据库中的categories表保持一致
+  const baseCategories = [
     '电子产品', '服装', '家居', '厨房用品', '图书',
     '玩具', '运动器材', '美妆', '食品', '办公用品'
   ];
+  
+  // 新增类别，仅在确认数据库支持的情况下使用
+  const newCategories = [
+    '户外装备', '健康保健', '母婴产品', '宠物用品', '汽车配件'
+  ];
+  
+  // 默认只使用基础类别，避免与数据库不一致
+  let categories = [...baseCategories];
 
   const categoryTemplates = {
     电子产品: ['智能手机', '笔记本电脑', '蓝牙耳机', '投影仪', '显示器'],
@@ -28,6 +48,13 @@ const { Product } = db;
     食品: ['牛奶', '饼干', '咖啡', '方便面', '坚果'],
     办公用品: ['签字笔', '文件夹', '笔记本', '打印纸', '鼠标垫']
   };
+
+  // 更新类别模板，添加新类别
+  categoryTemplates['户外装备'] = ['帐篷', '睡袋', '登山杖', '登山鞋', '头灯'];
+  categoryTemplates['健康保健'] = ['血压计', '按摩仪', '体重秤', '健康手环', '护腰带'];
+  categoryTemplates['母婴产品'] = ['婴儿奶瓶', '尿不湿', '婴儿推车', '婴儿床', '婴儿玩具'];
+  categoryTemplates['宠物用品'] = ['宠物窝', '宠物食盆', '猫砂', '宠物玩具', '宠物服装'];
+  categoryTemplates['汽车配件'] = ['车载充电器', '方向盘套', '挂饰', '座椅套', '应急工具'];
 
   const descriptionTemplates = {
     电子产品: [
@@ -82,11 +109,74 @@ const { Product } = db;
     ]
   };
 
-  try {
-    console.log('正在连接数据库...');
-    await db.sequelize.authenticate();
-    console.log('✅ 数据库连接成功');
+  // 更新描述模板，添加新类别的描述
+  descriptionTemplates['户外装备'] = [
+    '专为户外冒险设计，轻便且耐用。',
+    '防水防晒，适应各种户外环境。',
+    '专业户外装备，让你的旅程更加舒适安全。'
+  ];
+  
+  descriptionTemplates['健康保健'] = [
+    '关注健康，从日常监测开始。',
+    '科技赋能健康生活，让保健更简单。',
+    '精准检测，为您的健康保驾护航。'
+  ];
+  
+  descriptionTemplates['母婴产品'] = [
+    '专为宝宝设计，安全无害材质。',
+    '关爱宝宝成长的每一步。',
+    '让育儿更轻松，给宝宝更多呵护。'
+  ];
+  
+  descriptionTemplates['宠物用品'] = [
+    '让您的宠物享受舒适生活。',
+    '专为宠物设计，满足它们的各种需求。',
+    '优质材料，呵护您的爱宠健康。'
+  ];
+  
+  descriptionTemplates['汽车配件'] = [
+    '提升驾驶体验，让每一次出行更舒适。',
+    '耐用实用，为您的爱车增添实用功能。',
+    '高品质汽车配件，让您的座驾与众不同。'
+  ];
 
+  try {
+    log('正在连接数据库...');
+    await db.sequelize.authenticate();
+    log('数据库连接成功');
+
+    // 获取当前数据库中的商品数量
+    const existingCount = await Product.count();
+    log(`当前数据库中已有 ${existingCount} 个商品`);
+    
+    // 获取数据库中存在的类别
+    try {
+      const Category = db.Category;
+      if (Category) {
+        const existingCategories = await Category.findAll({
+          attributes: ['name']
+        });
+        
+        const existingCategoryNames = existingCategories.map(cat => cat.name);
+        log(`数据库中已有以下类别: ${existingCategoryNames.join(', ')}`);
+        
+        // 检查新类别是否已存在于数据库中
+        const supportedNewCategories = newCategories.filter(cat => 
+          existingCategoryNames.includes(cat)
+        );
+        
+        if (supportedNewCategories.length > 0) {
+          log(`将使用以下额外类别: ${supportedNewCategories.join(', ')}`);
+          categories = [...baseCategories, ...supportedNewCategories];
+        } else {
+          log('数据库中未找到新类别，仅使用基础类别');
+        }
+      }
+    } catch (categoryError) {
+      log('无法获取类别信息，将使用基础类别', true);
+      console.error(categoryError);
+    }
+    
     const products = [];
 
     for (let i = 0; i < TOTAL_PRODUCTS; i++) {
@@ -95,13 +185,24 @@ const { Product } = db;
       const itemName = itemNames[Math.floor(Math.random() * itemNames.length)];
 
       const brand = faker.company.name();
-      const name = `${brand} ${itemName}`;
+      // 生成更多样化的商品名称
+      const adjective = faker.commerce.productAdjective();
+      const name = `${brand}  ${itemName}`;
 
       const descList = descriptionTemplates[category] || ['品质优良，值得信赖。'];
+      // 构建更详细的产品描述
       const baseDesc = descList[Math.floor(Math.random() * descList.length)];
-      const description = `这款 ${itemName} 来自品牌「${brand}」，${baseDesc}`;
+      const features = [
+        faker.commerce.productMaterial() + "材质",
+        faker.number.int({ min: 1, max: 5 }) + "年保修",
+        Math.random() > 0.5 ? "支持退换货" : "限量版"
+      ].join("，");
+      
+      const description = `这款 ${adjective} ${itemName} 来自品牌「${brand}」，${baseDesc} 产品特点：${features}。`;
 
-      const imageUrl = `https://picsum.photos/seed/product${i}/400/300`;
+      // 构建随机图片URL，添加时间戳避免重复
+      const timestamp = Date.now() + i;
+      const imageUrl = `https://picsum.photos/seed/product${i}_${timestamp}/400/300`;
 
       products.push({
         name,
@@ -109,28 +210,46 @@ const { Product } = db;
         price: faker.commerce.price({ min: 10, max: 500, dec: 2 }),
         stock: faker.number.int({ min: 10, max: 100 }),
         category,
+        status: Math.random() > 0.9 ? 'discontinued' : 'active', // 10%的商品设置为已停产
         imageUrl
       });
     }
 
-    console.log(`准备插入 ${TOTAL_PRODUCTS} 条商品数据...`);
-    for (let i = 0; i < TOTAL_PRODUCTS; i += BATCH_SIZE) {
-      const batch = products.slice(i, i + BATCH_SIZE);
-      await Product.bulkCreate(batch);
-      console.log(`已插入第 ${i + 1} 到 ${Math.min(i + BATCH_SIZE, TOTAL_PRODUCTS)} 条`);
+    log(`准备插入 ${TOTAL_PRODUCTS} 条商品数据...`);
+    
+    try {
+      for (let i = 0; i < TOTAL_PRODUCTS; i += BATCH_SIZE) {
+        const batch = products.slice(i, i + BATCH_SIZE);
+        await Product.bulkCreate(batch);
+        log(`已插入第 ${i + 1} 到 ${Math.min(i + BATCH_SIZE, TOTAL_PRODUCTS)} 条`);
+      }
+      
+      // 验证插入结果
+      const newCount = await Product.count();
+      log(`插入完成，数据库中现有 ${newCount} 个商品（新增 ${newCount - existingCount} 个）`);
+      
+      log('全部商品数据插入完成');
+    } catch (insertErr) {
+      log(`批量插入过程中发生错误: ${insertErr.message}`, true);
+      throw insertErr;
     }
-
-    console.log('✅ 全部商品数据插入完成');
   } catch (err) {
-    console.error('❌ 插入失败:', err.message);
+    log(`插入失败: ${err.message}`, true);
     console.error(err.stack);
   } finally {
     try {
       await db.sequelize.close();
-      console.log('✅ 数据库连接已关闭');
+      log('数据库连接已关闭');
     } catch (err) {
-      console.error('关闭连接出错:', err.message);
+      log(`关闭连接出错: ${err.message}`, true);
     }
+    
+    // 添加总结信息
+    const endTime = new Date();
+    const startTime = new Date(process.hrtime()[0] * 1000);
+    const duration = (endTime - startTime) / 1000;
+    log(`脚本执行完毕，耗时: ${duration.toFixed(2)}秒`);
+    
     process.exit(0);
   }
 })();
