@@ -105,36 +105,67 @@ document.addEventListener('DOMContentLoaded', () => {
 // 搜索功能
 function performSearch() {
     const searchQuery = document.getElementById('search-input').value.trim();
-    window.currentState.searchQuery = searchQuery;
-    window.currentState.category = ''; // 重置类别筛选
     
-    // 重置类别按钮状态
-    document.querySelectorAll('.category-btn').forEach((btn, index) => {
-        btn.classList.toggle('active', index === 0); // 只激活"全部"按钮
-    });
-    
-    // 加载搜索结果
-    loadProducts(searchQuery);
+    // 仅当搜索查询发生变化时才重新加载
+    if (window.currentState.searchQuery !== searchQuery) {
+        window.currentState.searchQuery = searchQuery;
+        window.currentState.category = ''; // 重置类别筛选
+        
+        // 重置类别按钮状态
+        document.querySelectorAll('.category-btn').forEach((btn, index) => {
+            btn.classList.toggle('active', index === 0); // 只激活"全部"按钮
+        });
+        
+        // 重置产品列表和分页信息
+        document.getElementById('product-list').innerHTML = '';
+        window.currentState.allProducts = [];
+        window.currentState.filteredProducts = [];
+        window.currentState.pagination = {
+            page: 1,
+            limit: 12,
+            total: 0,
+            totalPages: 0,
+            hasMore: true
+        };
+        
+        // 删除之前的"已加载全部商品"提示
+        const endMessage = document.getElementById('end-of-products-message');
+        if (endMessage) {
+            endMessage.remove();
+        }
+        
+        // 加载搜索结果
+        loadProducts(searchQuery);
+    }
 }
 
 // 按类别筛选当前搜索结果
 function filterByCategory(category) {
-    window.currentState.category = category;
-    
-    // 重置页面和分页信息
-    document.getElementById('product-list').innerHTML = '';
-    window.currentState.allProducts = [];
-    window.currentState.filteredProducts = [];
-    window.currentState.pagination = {
-        page: 1,
-        limit: 12,
-        total: 0,
-        totalPages: 0,
-        hasMore: true
-    };
-    
-    // 使用新的类别加载产品
-    loadProducts(window.currentState.searchQuery);
+    // 只有当类别发生变化时才重新加载
+    if (window.currentState.category !== category) {
+        window.currentState.category = category;
+        
+        // 重置页面和分页信息
+        document.getElementById('product-list').innerHTML = '';
+        window.currentState.allProducts = [];
+        window.currentState.filteredProducts = [];
+        window.currentState.pagination = {
+            page: 1,
+            limit: 12,
+            total: 0,
+            totalPages: 0,
+            hasMore: true
+        };
+        
+        // 删除之前的"已加载全部商品"提示
+        const endMessage = document.getElementById('end-of-products-message');
+        if (endMessage) {
+            endMessage.remove();
+        }
+        
+        // 使用新的类别加载产品
+        loadProducts(window.currentState.searchQuery);
+    }
 }
 
 // 更新搜索状态提示
@@ -293,6 +324,12 @@ function loadProducts(searchQuery = '', resetPage = true) {
         params.append('category', window.currentState.category);
     }
     
+    // 添加已加载的产品ID到排除列表，避免重复获取
+    if (!resetPage && window.currentState.allProducts.length > 0) {
+        const loadedIds = window.currentState.allProducts.map(p => p.id);
+        params.append('excludeIds', loadedIds.join(','));
+    }
+    
     params.append('page', page);
     params.append('limit', limit);
     
@@ -313,8 +350,24 @@ function loadProducts(searchQuery = '', resetPage = true) {
             // 确保从响应中正确获取products数组和分页信息
             const products = data.products || [];
             
-            // 将新加载的产品添加到已有产品列表中
-            window.currentState.allProducts = [...window.currentState.allProducts, ...products];
+            // 将新加载的产品添加到已有产品列表中，避免重复添加
+            // 使用Map根据产品ID去重
+            const productsMap = new Map();
+            
+            // 将已有产品添加到Map中
+            window.currentState.allProducts.forEach(product => {
+                productsMap.set(product.id, product);
+            });
+            
+            // 添加新产品，如果ID已存在则跳过
+            products.forEach(product => {
+                if (!productsMap.has(product.id)) {
+                    productsMap.set(product.id, product);
+                }
+            });
+            
+            // 将Map转换回数组
+            window.currentState.allProducts = Array.from(productsMap.values());
             window.currentState.filteredProducts = window.currentState.allProducts;
             
             // 更新分页信息
@@ -365,10 +418,22 @@ function appendProducts(products) {
         return;
     }
     
-    // 向产品列表追加产品项
+    // 获取当前页面上已存在的产品ID集合
+    const existingProductIds = new Set();
+    document.querySelectorAll('.product-item .view-details').forEach(button => {
+        existingProductIds.add(button.getAttribute('data-id'));
+    });
+    
+    // 向产品列表追加产品项，避免重复添加
     products.forEach(product => {
+        // 检查产品是否已经存在于页面中
+        if (existingProductIds.has(product.id.toString())) {
+            return; // 跳过已存在的产品
+        }
+        
         const productElement = document.createElement('div');
         productElement.classList.add('product-item');
+        productElement.setAttribute('data-product-id', product.id);
         
         // 处理图片URL
         let imageUrl = product.imageUrl || '/images/default-product.jpg';
@@ -446,32 +511,39 @@ function handleInfiniteScroll() {
     const documentHeight = document.body.offsetHeight;
     const productList = document.getElementById('product-list');
     
-    // 添加产品加载完毕的提示
-    if (!window.currentState.pagination.hasMore && 
-        !document.getElementById('end-of-products-message') && 
-        productList.children.length > 0) {
-        
-        // 创建"所有产品加载完毕"的提示元素
-        const endMessage = document.createElement('div');
-        endMessage.id = 'end-of-products-message';
-        endMessage.className = 'end-of-products';
-        endMessage.innerHTML = '已加载全部商品';
-        
-        // 在产品列表后添加提示信息
-        const infiniteScrollLoader = document.getElementById('infinite-scroll-loader');
-        infiniteScrollLoader.parentNode.insertBefore(endMessage, infiniteScrollLoader.nextSibling);
-        
-        return; // 如果已经显示了提示，直接返回
+    // 防抖处理，避免频繁触发滚动事件
+    if (window.scrollTimeout) {
+        clearTimeout(window.scrollTimeout);
     }
     
-    // 当页面滚动到距离底部200px时，加载更多产品
-    if (scrollPosition >= documentHeight - 200 && 
-        window.currentState.pagination.hasMore && 
-        !window.currentState.isLoading) {
+    window.scrollTimeout = setTimeout(() => {
+        // 添加产品加载完毕的提示
+        if (!window.currentState.pagination.hasMore && 
+            !document.getElementById('end-of-products-message') && 
+            productList.children.length > 0) {
+            
+            // 创建"所有产品加载完毕"的提示元素
+            const endMessage = document.createElement('div');
+            endMessage.id = 'end-of-products-message';
+            endMessage.className = 'end-of-products';
+            endMessage.innerHTML = '已加载全部商品';
+            
+            // 在产品列表后添加提示信息
+            const infiniteScrollLoader = document.getElementById('infinite-scroll-loader');
+            infiniteScrollLoader.parentNode.insertBefore(endMessage, infiniteScrollLoader.nextSibling);
+            
+            return; // 如果已经显示了提示，直接返回
+        }
         
-        // 加载下一页产品
-        loadProducts(window.currentState.searchQuery, false);
-    }
+        // 当页面滚动到距离底部200px时，加载更多产品
+        if (scrollPosition >= documentHeight - 200 && 
+            window.currentState.pagination.hasMore && 
+            !window.currentState.isLoading) {
+            
+            // 加载下一页产品
+            loadProducts(window.currentState.searchQuery, false);
+        }
+    }, 100); // 100ms的防抖延迟
 }
 
 // 添加更新登录状态的函数
